@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StudyHub 项目架构总览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; padding: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; margin-bottom: 8px; color: #1a1a2e; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        
+        /* 架构图 */
+        .arch-diagram { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .arch-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a1a2e; }
+        .layers { display: flex; flex-direction: column; gap: 0; position: relative; }
+        .layer { display: flex; align-items: center; border: 2px solid; border-radius: 8px; padding: 12px 20px; margin-bottom: 8px; position: relative; }
+        .layer-label { width: 100px; font-weight: 600; font-size: 14px; flex-shrink: 0; }
+        .layer-items { display: flex; gap: 10px; flex-wrap: wrap; }
+        .layer-items span { padding: 4px 12px; border-radius: 4px; font-size: 13px; }
+        
+        .layer-client { border-color: #4a90d9; background: #e8f0fe; }
+        .layer-client .layer-label { color: #4a90d9; }
+        .layer-client .layer-items span { background: #4a90d9; color: #fff; }
+        
+        .layer-gateway { border-color: #7b68ee; background: #efe8ff; }
+        .layer-gateway .layer-label { color: #7b68ee; }
+        .layer-gateway .layer-items span { background: #7b68ee; color: #fff; }
+        
+        .layer-controller { border-color: #2ecc71; background: #e8f8f0; }
+        .layer-controller .layer-label { color: #27ae60; }
+        .layer-controller .layer-items span { background: #2ecc71; color: #fff; }
+        
+        .layer-service { border-color: #e67e22; background: #fef5e7; }
+        .layer-service .layer-label { color: #e67e22; }
+        .layer-service .layer-items span { background: #e67e22; color: #fff; }
+        
+        .layer-data { border-color: #e74c3c; background: #fde8e8; }
+        .layer-data .layer-label { color: #e74c3c; }
+        .layer-data .layer-items span { background: #e74c3c; color: #fff; }
+        
+        .layer-infra { border-color: #34495e; background: #ebedef; }
+        .layer-infra .layer-label { color: #34495e; }
+        .layer-infra .layer-items span { background: #34495e; color: #fff; }
+
+        .arrow-down { text-align: center; font-size: 18px; color: #999; line-height: 1; margin: -2px 0; }
+
+        /* 请求流程图 */
+        .flow-section { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .flow-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a1a2e; }
+        .flow-steps { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 6px; }
+        .flow-step { background: #4a90d9; color: #fff; padding: 8px 16px; border-radius: 6px; font-size: 13px; text-align: center; min-width: 80px; }
+        .flow-step.green { background: #2ecc71; }
+        .flow-step.orange { background: #e67e22; }
+        .flow-step.red { background: #e74c3c; }
+        .flow-step.purple { background: #7b68ee; }
+        .flow-step.grey { background: #34495e; }
+        .flow-arrow { font-size: 18px; color: #999; }
+
+        /* 表格 */
+        .table-section { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 30px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+        .table-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #1a1a2e; }
+        table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        th, td { padding: 10px 14px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
+        tr:hover { background: #f5f7fa; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; color: #fff; }
+        .tag-blue { background: #4a90d9; }
+        .tag-green { background: #2ecc71; }
+        .tag-orange { background: #e67e22; }
+        .tag-red { background: #e74c3c; }
+        .tag-purple { background: #7b68ee; }
+
+        /* 数据库表 */
+        .db-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .db-card { background: #f8f9fa; border-radius: 8px; padding: 14px; border-left: 4px solid #4a90d9; }
+        .db-card h4 { font-size: 14px; margin-bottom: 6px; color: #1a1a2e; }
+        .db-card p { font-size: 12px; color: #666; }
+        .db-card .fields { font-size: 11px; color: #999; margin-top: 4px; }
+
+        @media (max-width: 768px) {
+            .layer { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .layer-label { width: auto; }
+            .flow-steps { flex-direction: column; }
+            .flow-arrow { transform: rotate(90deg); }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>📚 StudyHub 项目架构总览</h1>
+    <p class="subtitle">Spring Boot 3 学习笔记分享平台 · 技术架构与请求流程</p>
+
+    <!-- ===== 分层架构图 ===== -->
+    <div class="arch-diagram">
+        <div class="arch-title">🏗️ 系统分层架构</div>
+        <div class="layers">
+            <div class="layer layer-client">
+                <div class="layer-label">客户端</div>
+                <div class="layer-items">
+                    <span>浏览器</span>
+                    <span>移动端</span>
+                    <span>Postman</span>
+                </div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="layer layer-gateway">
+                <div class="layer-label">接入层</div>
+                <div class="layer-items">
+                    <span>JWT 拦截器</span>
+                    <span>请求日志</span>
+                    <span>CORS 跨域</span>
+                    <span>Gzip 压缩</span>
+                </div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="layer layer-controller">
+                <div class="layer-label">控制层</div>
+                <div class="layer-items">
+                    <span>AuthController</span>
+                    <span>NoteController</span>
+                    <span>CommentController</span>
+                    <span>TagController</span>
+                    <span>InteractionController</span>
+                    <span>NotificationController</span>
+                    <span>AdminController</span>
+                    <span>FileController</span>
+                    <span>MyController</span>
+                </div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="layer layer-service">
+                <div class="layer-label">业务层</div>
+                <div class="layer-items">
+                    <span>UserService</span>
+                    <span>NoteService</span>
+                    <span>CommentService</span>
+                    <span>TagService</span>
+                    <span>InteractionService</span>
+                    <span>NotificationService</span>
+                    <span>AiSummaryService</span>
+                    <span>FileService</span>
+                </div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="layer layer-data">
+                <div class="layer-label">数据层</div>
+                <div class="layer-items">
+                    <span>MySQL</span>
+                    <span>Redis</span>
+                    <span>RabbitMQ</span>
+                    <span>文件系统</span>
+                </div>
+            </div>
+            <div class="arrow-down">↓</div>
+            <div class="layer layer-infra">
+                <div class="layer-label">基础设施</div>
+                <div class="layer-items">
+                    <span>Docker</span>
+                    <span>GitHub Actions</span>
+                    <span>DeepSeek API</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 请求流程图 ===== -->
+    <div class="flow-section">
+        <div class="flow-title">🔄 一次完整的请求流程（以"点赞笔记"为例）</div>
+        <div class="flow-steps">
+            <span class="flow-step">① 浏览器<br>POST /notes/1/like</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step purple">② JWT 拦截器<br>解析 Token</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step">③ InteractionController<br>接收请求</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step orange">④ InteractionService<br>点赞逻辑</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step green">⑤ 写入数据库<br>note_like 表</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step red">⑥ RabbitMQ<br>发送通知消息</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step purple">⑦ WebSocket<br>实时推送通知</span>
+            <span class="flow-arrow">→</span>
+            <span class="flow-step grey">⑧ 返回<br>Result.success()</span>
+        </div>
+        <p style="margin-top: 16px; font-size: 13px; color: #888; text-align: center;">整个流程在几十毫秒内完成，用户无感知</p>
+    </div>
+
+    <!-- ===== 数据库表 ===== -->
+    <div class="table-section">
+        <div class="table-title">🗄️ 数据库表结构（共 8 张表）</div>
+        <div class="db-grid">
+            <div class="db-card" style="border-left-color: #4a90d9;">
+                <h4>user</h4>
+                <p>用户表</p>
+                <div class="fields">id, username, password, nickname, avatar, email, role, status</div>
+            </div>
+            <div class="db-card" style="border-left-color: #2ecc71;">
+                <h4>note</h4>
+                <p>笔记表</p>
+                <div class="fields">id, user_id, title, content, summary, view_count, like_count, favorite_count, status</div>
+            </div>
+            <div class="db-card" style="border-left-color: #e67e22;">
+                <h4>comment</h4>
+                <p>评论表</p>
+                <div class="fields">id, note_id, user_id, content, status</div>
+            </div>
+            <div class="db-card" style="border-left-color: #e74c3c;">
+                <h4>note_like</h4>
+                <p>点赞表</p>
+                <div class="fields">id, note_id, user_id (唯一约束)</div>
+            </div>
+            <div class="db-card" style="border-left-color: #7b68ee;">
+                <h4>favorite</h4>
+                <p>收藏表</p>
+                <div class="fields">id, note_id, user_id (唯一约束)</div>
+            </div>
+            <div class="db-card" style="border-left-color: #34495e;">
+                <h4>tag</h4>
+                <p>标签表</p>
+                <div class="fields">id, name (唯一约束)</div>
+            </div>
+            <div class="db-card" style="border-left-color: #1abc9c;">
+                <h4>note_tag</h4>
+                <p>笔记-标签关联表</p>
+                <div class="fields">id, note_id, tag_id (唯一约束)</div>
+            </div>
+            <div class="db-card" style="border-left-color: #f39c12;">
+                <h4>browse_history</h4>
+                <p>浏览历史表</p>
+                <div class="fields">id, user_id, note_id (唯一约束)</div>
+            </div>
+            <div class="db-card" style="border-left-color: #c0392b;">
+                <h4>notification</h4>
+                <p>通知表</p>
+                <div class="fields">id, receiver_id, sender_id, note_id, type, content, read_status</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 核心功能模块 ===== -->
+    <div class="table-section">
+        <div class="table-title">📦 核心功能模块</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>模块</th>
+                    <th>Controller</th>
+                    <th>Service</th>
+                    <th>核心逻辑</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><span class="tag tag-blue">认证</span></td>
+                    <td>AuthController</td>
+                    <td>UserService</td>
+                    <td>JWT 签发/校验、BCrypt 加密、ThreadLocal 上下文</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-green">笔记</span></td>
+                    <td>NoteController</td>
+                    <td>NoteService</td>
+                    <td>CRUD、分页搜索、热门排行(Redis ZSet)、AI 摘要/问答</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-orange">评论</span></td>
+                    <td>CommentController</td>
+                    <td>CommentService</td>
+                    <td>发表/查询/分页/删除、通知触发</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-red">互动</span></td>
+                    <td>InteractionController</td>
+                    <td>InteractionService</td>
+                    <td>点赞/取消点赞、收藏/取消收藏、通知 + WebSocket 推送</td>
+                </tr>
+                <tr>
+                    <td><span class="tag tag-purple">标签</span></td>
+                    <td>TagController</td>
+                    <td>TagService</td>
+                    <td>创建/绑定/解绑、按标签查笔记</td>
+                </tr>
+                <tr>
+                    <td><span class="tag" style="background:#34495e;">通知</span></td>
+                    <td>NotificationController</td>
+                    <td>NotificationService</td>
+                    <td>数据库存储、WebSocket 实时推送、未读计数</td>
+                </tr>
+                <tr>
+                    <td><span class="tag" style="background:#1abc9c;">个人中心</span></td>
+                    <td>MyController</td>
+                    <td>MyService</td>
+                    <td>我的笔记/评论/收藏/点赞、浏览历史</td>
+                </tr>
+                <tr>
+                    <td><span class="tag" style="background:#f39c12;">文件</span></td>
+                    <td>FileController</td>
+                    <td>FileService</td>
+                    <td>头像/图片上传、类型校验、UUID 防重名</td>
+                </tr>
+                <tr>
+                    <td><span class="tag" style="background:#c0392b;">管理</span></td>
+                    <td>AdminController</td>
+                    <td>NoteService + UserService</td>
+                    <td>笔记审核、用户管理、数据统计仪表盘</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== 技术亮点 ===== -->
+    <div class="table-section">
+        <div class="table-title">⭐ 技术亮点（面试重点）</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>技术点</th>
+                    <th>实现方式</th>
+                    <th>解决什么问题</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>JWT 认证</td>
+                    <td>jjwt 0.12.6 + HandlerInterceptor + ThreadLocal</td>
+                    <td>无状态认证，不需要 Session，适合前后端分离</td>
+                </tr>
+                <tr>
+                    <td>接口限流</td>
+                    <td>自定义 @RateLimit 注解 + AOP + Redis ZSet 滑动窗口</td>
+                    <td>防止恶意刷接口（如刷点赞、刷评论）</td>
+                </tr>
+                <tr>
+                    <td>实时通知</td>
+                    <td>WebSocket + STOMP 协议 + SimpMessagingTemplate</td>
+                    <td>点赞/评论/收藏时实时推送给用户，不用轮询</td>
+                </tr>
+                <tr>
+                    <td>消息队列</td>
+                    <td>RabbitMQ + DirectExchange + 手动确认</td>
+                    <td>异步处理通知和浏览历史，解耦主流程</td>
+                </tr>
+                <tr>
+                    <td>延迟队列</td>
+                    <td>RabbitMQ TTL + 死信交换机（DLX）</td>
+                    <td>延迟 5 分钟聚合通知，避免频繁通知骚扰</td>
+                </tr>
+                <tr>
+                    <td>Redis 缓存</td>
+                    <td>StringRedisTemplate + Cache-Aside 模式 + ZSet 热门排行</td>
+                    <td>减少数据库查询，热门笔记实时排行</td>
+                </tr>
+                <tr>
+                    <td>AI 集成</td>
+                    <td>RestClient + DeepSeek API + Prompt Engineering</td>
+                    <td>自动生成笔记摘要、基于笔记内容智能问答</td>
+                </tr>
+                <tr>
+                    <td>XSS 防护</td>
+                    <td>Jackson 自定义反序列化器 + HTML 实体转义</td>
+                    <td>防止跨站脚本攻击，全局自动过滤</td>
+                </tr>
+                <tr>
+                    <td>权限控制</td>
+                    <td>@RequireAdmin 注解 + AOP 切面 + 角色枚举</td>
+                    <td>区分普通用户和管理员，保护管理接口</td>
+                </tr>
+                <tr>
+                    <td>Docker 部署</td>
+                    <td>多阶段构建 + docker-compose 编排 + 健康检查</td>
+                    <td>一条命令启动 MySQL + Redis + 应用</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== 项目目录 ===== -->
+    <div class="table-section">
+        <div class="table-title">📁 项目目录结构</div>
+        <pre style="background: #f5f7fa; padding: 16px; border-radius: 8px; font-size: 13px; line-height: 1.8; overflow-x: auto;">
+src/main/java/com/studyhub/
+├── StudyhubApplication.java          # 启动类
+├── common/                           # 公共工具
+│   ├── annotation/                   # 自定义注解
+│   │   ├── RateLimit.java            #   接口限流注解
+│   │   └── RequireAdmin.java         #   管理员权限注解
+│   ├── aspect/                       # AOP 切面
+│   │   ├── RateLimitAspect.java      #   限流切面（Redis ZSet 滑动窗口）
+│   │   └── RequireAdminAspect.java   #   权限检查切面
+│   ├── CacheUtil.java                # Redis 缓存工具类
+│   ├── ErrorCode.java                # 错误码枚举
+│   ├── JwtUtil.java                  # JWT 工具类
+│   ├── LoginUserHolder.java          # 当前登录用户上下文（ThreadLocal）
+│   ├── MarkdownUtil.java             # Markdown → HTML 转换
+│   ├── Result.java                   # 统一响应体
+│   ├── TraceIdHolder.java            # 链路追踪 ID
+│   └── XssUtil.java                  # XSS 防护工具
+├── config/                           # 配置类
+│   ├── AiConfig.java                 # DeepSeek API 客户端配置
+│   ├── JacksonConfig.java            # JSON 序列化 + XSS 反序列化器
+│   ├── JwtInterceptor.java           # JWT 拦截器
+│   ├── MybatisPlusConfig.java        # MyBatis-Plus 分页插件
+│   ├── OpenApiConfig.java            # Knife4j API 文档
+│   ├── PasswordConfig.java           # BCrypt 密码加密
+│   ├── RabbitConfig.java             # RabbitMQ 交换机/队列/绑定
+│   ├── RequestLogInterceptor.java    # 请求日志 + TraceId
+│   ├── WebConfig.java                # 拦截器/CORS/静态资源
+│   ├── WebSocketAuthInterceptor.java # WebSocket 握手认证
+│   ├── WebSocketConfig.java          # STOMP 消息代理
+│   ├── WebSocketUserInterceptor.java # WebSocket 用户身份
+│   └── XssDeserializer.java          # Jackson XSS 反序列化器
+├── controller/                       # 控制器（10 个）
+│   ├── AdminController.java          #   管理员接口
+│   ├── AuthController.java           #   认证接口
+│   ├── BrowseHistoryController.java  #   浏览历史接口
+│   ├── CommentController.java        #   评论接口
+│   ├── FileController.java           #   文件上传接口
+│   ├── HealthController.java         #   健康检查接口
+│   ├── InteractionController.java    #   点赞/收藏接口
+│   ├── MyController.java             #   个人中心接口
+│   ├── NoteController.java           #   笔记接口
+│   ├── NotificationController.java   #   通知接口
+│   ├── TagController.java            #   标签接口
+│   ├── UserController.java           #   用户测试接口
+│   └── VersionController.java        #   版本信息接口
+├── converter/                        # DTO 转换器
+├── dto/                              # 数据传输对象（20+ 个）
+├── entity/                           # 数据库实体（9 个）
+├── exception/                        # 异常处理
+├── mapper/                           # MyBatis-Plus Mapper（9 个）
+├── mq/                               # RabbitMQ 消息队列
+│   ├── BrowseHistoryConsumer.java    #   浏览历史消费者
+│   ├── BrowseHistoryProducer.java    #   浏览历史生产者
+│   ├── DelayNotificationConsumer.java #  延迟通知消费者
+│   ├── NotificationConsumer.java     #   通知消费者
+│   └── NotificationProducer.java     #   通知生产者
+└── service/                          # 业务接口 + 实现
+    ├── impl/                         # 业务实现（11 个）
+    └── *Service.java                 # 业务接口（11 个）</pre>
+    </div>
+
+</div>
+</body>
+</html>
