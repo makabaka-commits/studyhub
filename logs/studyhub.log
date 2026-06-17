@@ -1,0 +1,67 @@
+2026-06-16T15:05:32.113+08:00  INFO 27772 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Starting StudyhubApplication using Java 17.0.19 with PID 27772 (D:\code\studyhub\target\classes started by 19171 in D:\code\studyhub)
+2026-06-16T15:05:32.117+08:00  INFO 27772 --- [studyhub] [main] com.studyhub.StudyhubApplication         : The following 1 profile is active: "dev"
+2026-06-16T15:05:32.636+08:00  INFO 27772 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-06-16T15:05:32.637+08:00  INFO 27772 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-06-16T15:05:32.659+08:00  INFO 27772 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 11 ms. Found 0 Redis repository interfaces.
+2026-06-16T15:05:33.105+08:00  INFO 27772 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-16T15:05:33.114+08:00  INFO 27772 --- [studyhub] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-16T15:05:33.114+08:00  INFO 27772 --- [studyhub] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-06-16T15:05:33.166+08:00  INFO 27772 --- [studyhub] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-16T15:05:33.166+08:00  INFO 27772 --- [studyhub] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1011 ms
+2026-06-16T15:05:34.280+08:00  INFO 27772 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-16T15:05:34.286+08:00  INFO 27772 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Started StudyhubApplication in 2.501 seconds (process running for 2.839)
+2026-06-16T17:13:07.473+08:00  INFO 33464 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Starting StudyhubApplication using Java 17.0.19 with PID 33464 (D:\code\studyhub\target\classes started by 19171 in D:\code\studyhub)
+2026-06-16T17:13:07.475+08:00  INFO 33464 --- [studyhub] [main] com.studyhub.StudyhubApplication         : The following 1 profile is active: "dev"
+2026-06-16T17:13:07.954+08:00  INFO 33464 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-06-16T17:13:07.958+08:00  INFO 33464 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-06-16T17:13:08.007+08:00  INFO 33464 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 28 ms. Found 0 Redis repository interfaces.
+2026-06-16T17:13:08.481+08:00  INFO 33464 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-16T17:13:08.488+08:00  INFO 33464 --- [studyhub] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-16T17:13:08.488+08:00  INFO 33464 --- [studyhub] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-06-16T17:13:08.541+08:00  INFO 33464 --- [studyhub] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-16T17:13:08.541+08:00  INFO 33464 --- [studyhub] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1037 ms
+2026-06-16T17:13:09.610+08:00  INFO 33464 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-16T17:13:09.611+08:00  INFO 33464 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-06-16T17:13:09.611+08:00  INFO 33464 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@55e4dd68]]
+2026-06-16T17:13:09.612+08:00  INFO 33464 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-06-16T17:13:09.617+08:00  INFO 33464 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Started StudyhubApplication in 2.406 seconds (process running for 2.65)
+2026-06-16T17:14:09.617+08:00  INFO 33464 --- [studyhub] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+2026-06-16T17:19:44.423+08:00  INFO 33464 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopping...
+2026-06-16T17:19:44.423+08:00  INFO 33464 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@55e4dd68]]
+2026-06-16T17:19:44.423+08:00  INFO 33464 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopped.
+2026-06-16T17:19:50.405+08:00  INFO 15192 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Starting StudyhubApplication using Java 17.0.19 with PID 15192 (D:\code\studyhub\target\classes started by 19171 in D:\code\studyhub)
+2026-06-16T17:19:50.407+08:00  INFO 15192 --- [studyhub] [main] com.studyhub.StudyhubApplication         : The following 1 profile is active: "dev"
+2026-06-16T17:19:50.857+08:00  INFO 15192 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-06-16T17:19:50.858+08:00  INFO 15192 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-06-16T17:19:50.877+08:00  INFO 15192 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 10 ms. Found 0 Redis repository interfaces.
+2026-06-16T17:19:51.287+08:00  INFO 15192 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-16T17:19:51.293+08:00  INFO 15192 --- [studyhub] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-16T17:19:51.293+08:00  INFO 15192 --- [studyhub] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-06-16T17:19:51.336+08:00  INFO 15192 --- [studyhub] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-16T17:19:51.337+08:00  INFO 15192 --- [studyhub] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 902 ms
+2026-06-16T17:19:52.355+08:00  INFO 15192 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-16T17:19:52.356+08:00  INFO 15192 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-06-16T17:19:52.356+08:00  INFO 15192 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@cfc4601]]
+2026-06-16T17:19:52.356+08:00  INFO 15192 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-06-16T17:19:52.362+08:00  INFO 15192 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Started StudyhubApplication in 2.207 seconds (process running for 2.443)
+2026-06-16T17:20:52.350+08:00  INFO 15192 --- [studyhub] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]
+2026-06-16T20:55:56.867+08:00  INFO 15192 --- [studyhub] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 2, active threads = 1, queued tasks = 0, completed tasks = 1]
+2026-06-16T21:14:17.320+08:00  INFO 15192 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopping...
+2026-06-16T21:14:17.320+08:00  INFO 15192 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@cfc4601]]
+2026-06-16T21:14:17.320+08:00  INFO 15192 --- [studyhub] [SpringApplicationShutdownHook] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopped.
+2026-06-16T21:14:20.982+08:00  INFO 2436 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Starting StudyhubApplication using Java 17.0.19 with PID 2436 (D:\code\studyhub\target\classes started by 19171 in D:\code\studyhub)
+2026-06-16T21:14:20.983+08:00  INFO 2436 --- [studyhub] [main] com.studyhub.StudyhubApplication         : The following 1 profile is active: "dev"
+2026-06-16T21:14:21.448+08:00  INFO 2436 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-06-16T21:14:21.451+08:00  INFO 2436 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-06-16T21:14:21.480+08:00  INFO 2436 --- [studyhub] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 19 ms. Found 0 Redis repository interfaces.
+2026-06-16T21:14:22.113+08:00  INFO 2436 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-16T21:14:22.121+08:00  INFO 2436 --- [studyhub] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-16T21:14:22.121+08:00  INFO 2436 --- [studyhub] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.31]
+2026-06-16T21:14:22.166+08:00  INFO 2436 --- [studyhub] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-16T21:14:22.166+08:00  INFO 2436 --- [studyhub] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 1155 ms
+2026-06-16T21:14:23.351+08:00  INFO 2436 --- [studyhub] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2026-06-16T21:14:23.352+08:00  INFO 2436 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-06-16T21:14:23.352+08:00  INFO 2436 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@1fa796a4]]
+2026-06-16T21:14:23.352+08:00  INFO 2436 --- [studyhub] [main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-06-16T21:14:23.357+08:00  INFO 2436 --- [studyhub] [main] com.studyhub.StudyhubApplication         : Started StudyhubApplication in 2.626 seconds (process running for 2.853)
+2026-06-16T21:15:23.340+08:00  INFO 2436 --- [studyhub] [MessageBroker-1] o.s.w.s.c.WebSocketMessageBrokerStats    : WebSocketSession[0 current WS(0)-HttpStream(0)-HttpPoll(0), 0 total, 0 closed abnormally (0 connect failure, 0 send limit, 0 transport error)], stompSubProtocol[processed CONNECT(0)-CONNECTED(0)-DISCONNECT(0)], stompBrokerRelay[null], inboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], outboundChannel[pool size = 0, active threads = 0, queued tasks = 0, completed tasks = 0], sockJsScheduler[pool size = 1, active threads = 1, queued tasks = 0, completed tasks = 0]

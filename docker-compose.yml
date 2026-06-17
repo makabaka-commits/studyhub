@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # ===== MySQL 数据库 =====
+  mysql:
+    image: mysql:8.0
+    container_name: studyhub-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: studyhub
+      MYSQL_USER: ${MYSQL_USER:-studyhub}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-studyhub123}
+    ports:
+      - "3307:3306"    # 映射到 3307 避免和本地 MySQL 冲突
+    volumes:
+      - mysql-data:/var/lib/mysql                    # 数据持久化
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql  # 初始化 SQL
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== Redis 缓存 =====
+  redis:
+    image: redis:7-alpine
+    container_name: studyhub-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"    # 映射到 6380 避免和本地 Redis 冲突
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===== 应用服务 =====
+  app:
+    build: .
+    container_name: studyhub-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # 数据库连接（指向 docker-compose 中的 mysql 服务）
+      STUDYHUB_DB_URL: jdbc:mysql://mysql:3306/studyhub?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai
+      STUDYHUB_DB_USERNAME: ${MYSQL_USER:-studyhub}
+      STUDYHUB_DB_PASSWORD: ${MYSQL_PASSWORD:-studyhub123}
+      # Redis 连接（指向 docker-compose 中的 redis 服务）
+      STUDYHUB_REDIS_HOST: redis
+      STUDYHUB_REDIS_PORT: 6379
+      STUDYHUB_REDIS_DATABASE: 0
+      # AI 配置（可选）
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+    volumes:
+      - app-uploads:/app/uploads    # 上传文件持久化
+    depends_on:
+      mysql:
+        condition: service_healthy   # 等待 MySQL 健康检查通过
+      redis:
+        condition: service_healthy   # 等待 Redis 健康检查通过
+
+volumes:
+  mysql-data:
+  redis-data:
+  app-uploads:

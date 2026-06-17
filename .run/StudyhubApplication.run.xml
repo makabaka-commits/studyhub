@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="StudyhubApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="studyhub" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.studyhub.StudyhubApplication" />
+    <envs>
+      <env name="STUDYHUB_DB_URL" value="jdbc:mysql://localhost:3306/studyhub?useUnicode=true&amp;characterEncoding=utf8&amp;serverTimezone=Asia/Shanghai" />
+      <env name="STUDYHUB_DB_USERNAME" value="root" />
+      <env name="STUDYHUB_DB_PASSWORD" value="5452" />
+      <env name="STUDYHUB_REDIS_HOST" value="localhost" />
+      <env name="STUDYHUB_REDIS_PORT" value="6379" />
+      <env name="STUDYHUB_REDIS_DATABASE" value="0" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

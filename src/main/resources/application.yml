@@ -1,0 +1,52 @@
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain,text/css,text/javascript
+    min-response-size: 1024
+
+spring:
+  application:
+    name: studyhub
+
+  profiles:
+    active:${SPRING_PROFILES_ACTIVE:dev}
+
+  mvc:
+    throw-exception-if-no-handler-found: true
+
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+      context-path: /api/v1
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+knife4j:
+  enable: true
+
+project:
+  version: "@project.version@"
+
+upload:
+  path: D:/code/studyhub/uploads
+
+management:
+  endpoints:
+    web:
+      exposure:
+        # 暴露的端点，* 表示所有，生产环境建议只暴露需要的
+        include: health,info,metrics
+  endpoint:
+    health:
+      # 显示详细健康信息（默认只显示 UP/DOWN）
+      show-details: when-authorized
+      show-components: when-authorized

@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: ${STUDYHUB_DB_URL}
+    username: ${STUDYHUB_DB_USERNAME}
+    password: ${STUDYHUB_DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+      connection-timeout: 10000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      pool-name: StudyHubPool
+      connection-test-query: SELECT 1
+
+  data:
+    redis:
+      host: ${STUDYHUB_REDIS_HOST}
+      port: ${STUDYHUB_REDIS_PORT:6379}
+      database: ${STUDYHUB_REDIS_DATABASE:0}
+
+  jackson:
+    # 生产环境不序列化 null 字段，减少传输量
+    default-property-inclusion: non_null
+
+# 生产环境关闭 SQL 日志
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+
+logging:
+  level:
+    root: warn
+    com.studyhub: info
+    com.studyhub.mapper: warn
+  file:
+    name: /var/log/studyhub/studyhub.log
+  logback:
+    rollingpolicy:
+      max-file-size: 100MB
+      max-history: 30
+
+ai:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY}
+    base-url: https://api.deepseek.com
+    model: deepseek-chat
+
+upload:
+  path: /app/uploads
