@@ -11,9 +11,11 @@ CREATE TABLE IF NOT EXISTS user (
     nickname VARCHAR(50),
     avatar VARCHAR(255),
     email VARCHAR(100),
+    role VARCHAR(20) NOT NULL DEFAULT 'USER',
     status TINYINT DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_user_status (status)
 );
 
 CREATE TABLE IF NOT EXISTS note (
@@ -27,7 +29,9 @@ CREATE TABLE IF NOT EXISTS note (
     favorite_count INT DEFAULT 0,
     status TINYINT DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_note_status_created (status, created_at),
+    KEY idx_note_user (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS comment (
@@ -37,7 +41,9 @@ CREATE TABLE IF NOT EXISTS comment (
     content VARCHAR(1000) NOT NULL,
     status TINYINT DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    KEY idx_comment_note_status (note_id, status),
+    KEY idx_comment_user (user_id)
 );
 
 CREATE TABLE IF NOT EXISTS note_like (
@@ -77,7 +83,8 @@ CREATE TABLE IF NOT EXISTS browse_history (
     note_id BIGINT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY uk_user_note (user_id, note_id)
+    UNIQUE KEY uk_user_note (user_id, note_id),
+    KEY idx_browse_updated (user_id, updated_at)
 );
 
 CREATE TABLE IF NOT EXISTS notification (
@@ -88,5 +95,6 @@ CREATE TABLE IF NOT EXISTS notification (
     type VARCHAR(30) NOT NULL,
     content VARCHAR(255) NOT NULL,
     read_status TINYINT DEFAULT 0,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_notification_receiver_read (receiver_id, read_status, created_at)
 );

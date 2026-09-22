@@ -1,10 +1,14 @@
 USE studyhub;
 
-INSERT INTO user (username, password, nickname, status)
+INSERT INTO user (username, password, nickname, role, status)
 VALUES
-('test03', '123456', '测试用户3', 1),
-('user_b', '123456', '用户B', 1)
-ON DUPLICATE KEY UPDATE username = username;
+('test03', '$2a$10$wVYomiQoHVn13n9BUnp3nu9uK1ylQ.mOj8uDHPm/ycyqJxIeVO9BO', '测试用户3', 'ADMIN', 1),
+('user_b', '$2a$10$wVYomiQoHVn13n9BUnp3nu9uK1ylQ.mOj8uDHPm/ycyqJxIeVO9BO', '用户B', 'USER', 1)
+ON DUPLICATE KEY UPDATE
+password = VALUES(password),
+nickname = VALUES(nickname),
+role = VALUES(role),
+status = VALUES(status);
 
 INSERT INTO note (user_id, title, content, view_count, like_count, favorite_count, status)
 VALUES

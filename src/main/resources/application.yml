@@ -1,5 +1,7 @@
 server:
   port: 8080
+  servlet:
+    context-path: /api/v1
   compression:
     enabled: true
     mime-types: application/json,application/xml,text/html,text/plain,text/css,text/javascript
@@ -10,7 +12,7 @@ spring:
     name: studyhub
 
   profiles:
-    active:${SPRING_PROFILES_ACTIVE:dev}
+    active: ${SPRING_PROFILES_ACTIVE:dev}
 
   mvc:
     throw-exception-if-no-handler-found: true
@@ -24,7 +26,6 @@ spring:
       enabled: true
       max-file-size: 10MB
       max-request-size: 20MB
-      context-path: /api/v1
 
 springdoc:
   swagger-ui:
@@ -37,7 +38,12 @@ project:
   version: "@project.version@"
 
 upload:
-  path: D:/code/studyhub/uploads
+  path: ${STUDYHUB_UPLOAD_PATH:./uploads}
+
+security:
+  jwt:
+    secret: ${STUDYHUB_JWT_SECRET:studyhub-dev-only-secret-change-me-2026}
+    expire-seconds: ${STUDYHUB_JWT_EXPIRE_SECONDS:86400}
 
 management:
   endpoints:

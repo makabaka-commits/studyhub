@@ -19,7 +19,6 @@ import com.studyhub.mapper.UserMapper;
 import com.studyhub.service.BrowseHistoryService;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -41,24 +40,8 @@ public class BrowseHistoryServiceImpl implements BrowseHistoryService {
     }
 
     @Override
-    public void recordBrowse(Long noteId) {
-        Long userId = LoginUserHolder.getUserId();
-
-        LambdaQueryWrapper<BrowseHistory> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(BrowseHistory::getUserId, userId);
-        queryWrapper.eq(BrowseHistory::getNoteId, noteId);
-
-        BrowseHistory existing = browseHistoryMapper.selectOne(queryWrapper);
-        if (existing != null) {
-            existing.setUpdatedAt(LocalDateTime.now());
-            browseHistoryMapper.updateById(existing);
-            return;
-        }
-
-        BrowseHistory history = new BrowseHistory();
-        history.setUserId(userId);
-        history.setNoteId(noteId);
-        browseHistoryMapper.insert(history);
+    public void recordBrowse(Long userId, Long noteId) {
+        browseHistoryMapper.upsert(userId, noteId);
     }
 
     @Override

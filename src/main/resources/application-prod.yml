@@ -22,6 +22,18 @@ spring:
       port: ${STUDYHUB_REDIS_PORT:6379}
       database: ${STUDYHUB_REDIS_DATABASE:0}
 
+  rabbitmq:
+    connection-timeout: 3s
+    host: ${STUDYHUB_RABBITMQ_HOST}
+    port: ${STUDYHUB_RABBITMQ_PORT:5672}
+    username: ${STUDYHUB_RABBITMQ_USERNAME}
+    password: ${STUDYHUB_RABBITMQ_PASSWORD}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
+
   jackson:
     # 生产环境不序列化 null 字段，减少传输量
     default-property-inclusion: non_null
@@ -51,3 +63,7 @@ ai:
 
 upload:
   path: /app/uploads
+
+security:
+  jwt:
+    secret: ${STUDYHUB_JWT_SECRET}

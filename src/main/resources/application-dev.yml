@@ -5,7 +5,7 @@ spring:
   datasource:
     url: ${STUDYHUB_DB_URL:jdbc:mysql://localhost:3306/studyhub?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai}
     username: ${STUDYHUB_DB_USERNAME:root}
-    password: ${STUDYHUB_DB_PASSWORD:5452}
+    password: ${STUDYHUB_DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       maximum-pool-size: 20
@@ -15,20 +15,18 @@ spring:
       max-lifetime: 600000
       pool-name: StudyHubPool
       connection-test-query: SELECT 1
-    rabbitmq:
-      host: ${STUDYHUB_RABBITMQ_HOST:localhost}
-      port: ${STUDYHUB_RABBITMQ_PORT:5672}
-      username: ${STUDYHUB_RABBITMQ_USERNAME:guest}
-      password: ${STUDYHUB_RABBITMQ_PASSWORD:guest}
-      virtual-host: /
-      # 开启发送确认（生产者知道消息是否到达交换机）
-      publisher-confirm-type: correlated
-      # 开启发送返回（消息无法路由到队列时回调）
-      publisher-returns: true
-      # 手动确认（消费者处理完才确认，防止消息丢失）
-      listener:
-        simple:
-          acknowledge-mode: manual
+  rabbitmq:
+    connection-timeout: 3s
+    host: ${STUDYHUB_RABBITMQ_HOST:localhost}
+    port: ${STUDYHUB_RABBITMQ_PORT:5672}
+    username: ${STUDYHUB_RABBITMQ_USERNAME:guest}
+    password: ${STUDYHUB_RABBITMQ_PASSWORD:guest}
+    virtual-host: /
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    listener:
+      simple:
+        acknowledge-mode: manual
   data:
     redis:
       host: ${STUDYHUB_REDIS_HOST:localhost}

@@ -6,7 +6,6 @@ import com.studyhub.dto.NotificationMessage;
 import com.studyhub.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.stereotype.Component;
 
@@ -20,9 +19,12 @@ public class NotificationConsumer {
     private static final Logger log = LoggerFactory.getLogger(NotificationConsumer.class);
 
     private final NotificationService notificationService;
+    private final FailedMessageHandler failedMessageHandler;
 
-    public NotificationConsumer(NotificationService notificationService) {
+    public NotificationConsumer(NotificationService notificationService,
+                                FailedMessageHandler failedMessageHandler) {
         this.notificationService = notificationService;
+        this.failedMessageHandler = failedMessageHandler;
     }
 
     /**
@@ -30,7 +32,7 @@ public class NotificationConsumer {
      *
      * @param message 通知消息
      * @param channel RabbitMQ 通道（用于手动确认）
-     * @param deliveryTag 消息投递标签（用于确认哪条消息）
+     * @param amqpMessage 原始消息（包含投递标签）
      */
     @RabbitListener(queues = RabbitConfig.QUEUE_NOTIFICATION)
     public void handleNotification(NotificationMessage message, Channel channel,
@@ -47,18 +49,16 @@ public class NotificationConsumer {
                     message.getContent()
             );
 
-            // 手动确认：告诉 RabbitMQ 消息已处理完成，可以删除
-            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
-
-            log.debug("通知消息处理完成: type={}", message.getType());
         } catch (Exception e) {
             log.error("通知消息处理失败", e);
-            try {
-                // 处理失败：拒绝消息，不重新入队（防止死循环）
-                channel.basicNack(amqpMessage.getMessageProperties().getDeliveryTag(), false, false);
-            } catch (Exception ex) {
-                log.error("消息确认失败", ex);
-            }
+            failedMessageHandler.park(amqpMessage, channel, RabbitConfig.QUEUE_NOTIFICATION_FAILED);
+            return;
+        }
+        try {
+            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
+            log.debug("通知消息处理完成: type={}", message.getType());
+        } catch (Exception e) {
+            log.error("通知消息确认失败，等待连接恢复后重投", e);
         }
     }
 }

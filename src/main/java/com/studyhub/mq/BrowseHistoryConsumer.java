@@ -19,9 +19,12 @@ public class BrowseHistoryConsumer {
     private static final Logger log = LoggerFactory.getLogger(BrowseHistoryConsumer.class);
 
     private final BrowseHistoryService browseHistoryService;
+    private final FailedMessageHandler failedMessageHandler;
 
-    public BrowseHistoryConsumer(BrowseHistoryService browseHistoryService) {
+    public BrowseHistoryConsumer(BrowseHistoryService browseHistoryService,
+                                 FailedMessageHandler failedMessageHandler) {
         this.browseHistoryService = browseHistoryService;
+        this.failedMessageHandler = failedMessageHandler;
     }
 
     /**
@@ -34,19 +37,18 @@ public class BrowseHistoryConsumer {
             log.debug("收到浏览历史消息: userId={}, noteId={}", message.getUserId(), message.getNoteId());
 
             // 调用 Service 写入数据库
-            browseHistoryService.recordBrowse(message.getNoteId());
+            browseHistoryService.recordBrowse(message.getUserId(), message.getNoteId());
 
-            // 手动确认
-            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
-
-            log.debug("浏览历史消息处理完成");
         } catch (Exception e) {
             log.error("浏览历史消息处理失败", e);
-            try {
-                channel.basicNack(amqpMessage.getMessageProperties().getDeliveryTag(), false, false);
-            } catch (Exception ex) {
-                log.error("消息确认失败", ex);
-            }
+            failedMessageHandler.park(amqpMessage, channel, RabbitConfig.QUEUE_BROWSE_HISTORY_FAILED);
+            return;
+        }
+        try {
+            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
+            log.debug("浏览历史消息处理完成");
+        } catch (Exception e) {
+            log.error("浏览历史消息确认失败，等待连接恢复后重投", e);
         }
     }
 }

@@ -13,6 +13,8 @@ import com.studyhub.dto.TagCreateRequest;
 import com.studyhub.dto.UserBriefResponse;
 import com.studyhub.entity.Note;
 import com.studyhub.entity.NoteTag;
+import com.studyhub.entity.NoteStatus;
+import com.studyhub.common.LoginUserHolder;
 import com.studyhub.entity.Tag;
 import com.studyhub.entity.User;
 import com.studyhub.exception.BusinessException;
@@ -89,8 +91,11 @@ public class TagServiceImpl implements TagService {
     @Override
     public void bindTagToNote(NoteTagBindRequest request) {
         Note note = noteMapper.selectById(request.getNoteId());
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
+        }
+        if (!note.getUserId().equals(LoginUserHolder.getUserId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "no permission");
         }
 
         Tag tag = tagMapper.selectById(request.getTagId());
@@ -177,6 +182,13 @@ public class TagServiceImpl implements TagService {
 
     @Override
     public void unbindTagFromNote(NoteTagBindRequest request) {
+        Note note = noteMapper.selectById(request.getNoteId());
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
+        }
+        if (!note.getUserId().equals(LoginUserHolder.getUserId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "no permission");
+        }
         LambdaQueryWrapper<NoteTag> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(NoteTag::getNoteId, request.getNoteId());
         queryWrapper.eq(NoteTag::getTagId, request.getTagId());

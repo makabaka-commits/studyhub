@@ -27,21 +27,18 @@ public class AuthController {
 
     @Operation(summary = "用户注册")
     @PostMapping("/register")
+    @RateLimit(key = "'register:' + #request.username", window = 3600, limit = 3, message = "注册尝试太频繁")
     public Result<Void> register(@RequestBody @Valid UserRegisterRequest request) {
         userService.register(request);
         return Result.success();
     }
-    @RateLimit(key = "'register:' + #request.username", window = 3600, limit = 1, message = "该用户名已注册")
-
-
     @Operation(summary = "用户登录")
     @PostMapping("/login")
+    @RateLimit(key = "'login:' + #request.username", window = 60, limit = 5, message = "登录尝试太频繁")
     public Result<UserLoginResponse> login(@RequestBody @Valid UserLoginRequest request) {
         UserLoginResponse response = userService.login(request);
         return Result.success(response);
     }
-    @RateLimit(key = "'login:' + #request.username", window = 60, limit = 5, message = "登录尝试太频繁")
-
     @Operation(summary = "获取当前登录用户")
     @GetMapping("/me")
     public Result<CurrentUserResponse> getCurrentUser() {

@@ -1,0 +1,164 @@
+{
+  "info": {
+    "name": "StudyHub Backend Demo",
+    "description": "StudyHub 后端面试演示流程，可直接导入 Apifox。",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api/v1" },
+    { "key": "username", "value": "demo_user" },
+    { "key": "password", "value": "password123" },
+    { "key": "interactorUsername", "value": "demo_interactor" },
+    { "key": "interactorPassword", "value": "password123" },
+    { "key": "userToken", "value": "" },
+    { "key": "interactorToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "adminUsername", "value": "test03" },
+    { "key": "adminPassword", "value": "password" },
+    { "key": "noteId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 用户注册",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\",\n  \"nickname\": \"面试演示用户\"\n}" },
+        "url": "{{baseUrl}}/auth/register"
+      }
+    },
+    {
+      "name": "02 用户登录",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.token) pm.collectionVariables.set('userToken', body.data.token);"] }
+      }],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "03 发布笔记",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data) pm.collectionVariables.set('noteId', body.data);"] }
+      }],
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"title\": \"StudyHub 面试演示笔记\",\n  \"content\": \"# Spring Boot\\n这是一篇用于演示完整后端流程的笔记。\"\n}" },
+        "url": "{{baseUrl}}/notes"
+      }
+    },
+    {
+      "name": "04 管理员登录",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.token) pm.collectionVariables.set('adminToken', body.data.token);"] }
+      }],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{adminUsername}}\",\n  \"password\": \"{{adminPassword}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "05 审核通过笔记",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "method": "PUT",
+        "url": "{{baseUrl}}/admin/notes/{{noteId}}/approve"
+      }
+    },
+    {
+      "name": "06 分页查询笔记",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/notes/page?pageNum=1&pageSize=10"
+      }
+    },
+    {
+      "name": "07 查询笔记详情",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/notes/{{noteId}}"
+      }
+    },
+    {
+      "name": "08 互动用户注册",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{interactorUsername}}\",\n  \"password\": \"{{interactorPassword}}\",\n  \"nickname\": \"互动演示用户\"\n}" },
+        "url": "{{baseUrl}}/auth/register"
+      }
+    },
+    {
+      "name": "09 互动用户登录",
+      "event": [{
+        "listen": "test",
+        "script": { "type": "text/javascript", "exec": ["const body = pm.response.json();", "if (body.data && body.data.token) pm.collectionVariables.set('interactorToken', body.data.token);"] }
+      }],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{interactorUsername}}\",\n  \"password\": \"{{interactorPassword}}\"\n}" },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "10 点赞笔记",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{interactorToken}}", "type": "string" }] },
+        "method": "POST",
+        "url": "{{baseUrl}}/notes/{{noteId}}/like"
+      }
+    },
+    {
+      "name": "11 发表评论",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{interactorToken}}", "type": "string" }] },
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"noteId\": {{noteId}},\n  \"content\": \"这是一条 Apifox 演示评论\"\n}" },
+        "url": "{{baseUrl}}/comments"
+      }
+    },
+    {
+      "name": "12 作者查询通知",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/notifications/page?pageNum=1&pageSize=10"
+      }
+    },
+    {
+      "name": "13 健康检查",
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "url": "{{baseUrl}}/health"
+      }
+    },
+    {
+      "name": "14 管理员仪表盘",
+      "request": {
+        "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}", "type": "string" }] },
+        "method": "GET",
+        "url": "{{baseUrl}}/admin/dashboard"
+      }
+    }
+  ]
+}

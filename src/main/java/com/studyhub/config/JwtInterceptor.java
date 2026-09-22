@@ -10,6 +10,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 public class JwtInterceptor implements HandlerInterceptor {
 
+    private final JwtUtil jwtUtil;
+
+    public JwtInterceptor(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         String authorization = request.getHeader("Authorization");
@@ -21,7 +27,7 @@ public class JwtInterceptor implements HandlerInterceptor {
         String token = authorization.substring(7);
 
         try {
-            Long userId = JwtUtil.getUserId(token);
+            Long userId = jwtUtil.getUserId(token);
             LoginUserHolder.setUserId(userId);
         } catch (JwtException | IllegalArgumentException e) {
             throw new UnauthorizedException("invalid token");

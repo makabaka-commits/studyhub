@@ -8,6 +8,7 @@ import com.studyhub.dto.UserBriefResponse;
 import com.studyhub.entity.Favorite;
 import com.studyhub.entity.Note;
 import com.studyhub.entity.NoteLike;
+import com.studyhub.entity.NoteStatus;
 import com.studyhub.entity.User;
 import com.studyhub.exception.BusinessException;
 import com.studyhub.mapper.FavoriteMapper;
@@ -20,6 +21,7 @@ import com.studyhub.common.LoginUserHolder;
 import com.studyhub.service.NotificationService;
 import com.studyhub.converter.UserConverter;
 import com.studyhub.mq.NotificationProducer;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class InteractionServiceImpl implements InteractionService {
@@ -47,6 +49,7 @@ public class InteractionServiceImpl implements InteractionService {
     }
 
     @Override
+    @Transactional
     public void likeNote(Long noteId) {
         Long userId = LoginUserHolder.getUserId();
         Note note = checkNote(noteId);
@@ -64,26 +67,14 @@ public class InteractionServiceImpl implements InteractionService {
         NoteLike noteLike = new NoteLike();
         noteLike.setNoteId(noteId);
         noteLike.setUserId(userId);
-        noteLikeMapper.insert(noteLike);
-
-        note.setLikeCount(note.getLikeCount() == null ? 1 : note.getLikeCount() + 1);
-        noteMapper.updateById(note);
-
-        // 保存通知到数据库
-
-        notificationProducer.sendNotification(new NotificationMessage(
-                note.getUserId(),
-                userId,
-                note.getId(),
-                "LIKE",
-                "有人点赞了你的笔记：" + note.getTitle()
-        ));
-
-        // WebSocket 实时推送通知
-        pushNotification(note, userId, "LIKE", "有人点赞了你的笔记：" + note.getTitle());
+        if (noteLikeMapper.insert(noteLike) != 1 || noteMapper.incrementLikeCount(noteId) != 1) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "like note failed");
+        }
+        notifyNoteOwner(note, userId, "LIKE", "有人点赞了你的笔记：" + note.getTitle());
     }
 
     @Override
+    @Transactional
     public void unlikeNote(Long noteId) {
         Long userId = LoginUserHolder.getUserId();
         Note note = checkNote(noteId);
@@ -98,14 +89,13 @@ public class InteractionServiceImpl implements InteractionService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "not liked yet");
         }
 
-        noteLikeMapper.deleteById(existing.getId());
-
-        int count = note.getLikeCount() == null ? 0 : note.getLikeCount();
-        note.setLikeCount(Math.max(count - 1, 0));
-        noteMapper.updateById(note);
+        if (noteLikeMapper.deleteById(existing.getId()) != 1 || noteMapper.decrementLikeCount(noteId) != 1) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "unlike note failed");
+        }
     }
 
     @Override
+    @Transactional
     public void favoriteNote(Long noteId) {
         Long userId = LoginUserHolder.getUserId();
         Note note = checkNote(noteId);
@@ -123,26 +113,14 @@ public class InteractionServiceImpl implements InteractionService {
         Favorite favorite = new Favorite();
         favorite.setNoteId(noteId);
         favorite.setUserId(userId);
-        favoriteMapper.insert(favorite);
-
-        note.setFavoriteCount(note.getFavoriteCount() == null ? 1 : note.getFavoriteCount() + 1);
-        noteMapper.updateById(note);
-
-        // 保存通知到数据库
-
-        notificationProducer.sendNotification(new NotificationMessage(
-                note.getUserId(),
-                userId,
-                note.getId(),
-                "FAVORITE",
-                "有人收藏了你的笔记：" + note.getTitle()
-        ));
-
-        // WebSocket 实时推送通知
-        pushNotification(note, userId, "FAVORITE", "有人收藏了你的笔记：" + note.getTitle());
+        if (favoriteMapper.insert(favorite) != 1 || noteMapper.incrementFavoriteCount(noteId) != 1) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "favorite note failed");
+        }
+        notifyNoteOwner(note, userId, "FAVORITE", "有人收藏了你的笔记：" + note.getTitle());
     }
 
     @Override
+    @Transactional
     public void unfavoriteNote(Long noteId) {
         Long userId = LoginUserHolder.getUserId();
         Note note = checkNote(noteId);
@@ -157,11 +135,18 @@ public class InteractionServiceImpl implements InteractionService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "not favorited yet");
         }
 
-        favoriteMapper.deleteById(existing.getId());
+        if (favoriteMapper.deleteById(existing.getId()) != 1 || noteMapper.decrementFavoriteCount(noteId) != 1) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "unfavorite note failed");
+        }
+    }
 
-        int count = note.getFavoriteCount() == null ? 0 : note.getFavoriteCount();
-        note.setFavoriteCount(Math.max(count - 1, 0));
-        noteMapper.updateById(note);
+    private void notifyNoteOwner(Note note, Long senderId, String type, String content) {
+        if (note.getUserId().equals(senderId)) {
+            return;
+        }
+        notificationProducer.sendNotification(new NotificationMessage(
+                note.getUserId(), senderId, note.getId(), type, content));
+        pushNotification(note, senderId, type, content);
     }
 
     /**
@@ -190,7 +175,7 @@ public class InteractionServiceImpl implements InteractionService {
 
     private Note checkNote(Long noteId) {
         Note note = noteMapper.selectById(noteId);
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || !NoteStatus.APPROVED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
         return note;
@@ -198,7 +183,7 @@ public class InteractionServiceImpl implements InteractionService {
 
     private void checkUser(Long userId) {
         User user = userMapper.selectById(userId);
-        if (user == null) {
+        if (user == null || !Integer.valueOf(1).equals(user.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "user not found");
         }
     }

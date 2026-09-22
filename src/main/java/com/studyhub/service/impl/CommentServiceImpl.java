@@ -6,6 +6,7 @@ import com.studyhub.common.ErrorCode;
 import com.studyhub.dto.*;
 import com.studyhub.entity.Comment;
 import com.studyhub.entity.Note;
+import com.studyhub.entity.NoteStatus;
 import com.studyhub.entity.User;
 import com.studyhub.exception.BusinessException;
 import com.studyhub.mapper.CommentMapper;
@@ -21,6 +22,9 @@ import com.studyhub.converter.UserConverter;
 import com.studyhub.service.NotificationService;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class CommentServiceImpl implements CommentService {
@@ -36,6 +40,19 @@ public class CommentServiceImpl implements CommentService {
         return CommentConverter.toResponse(comment, author);
     }
 
+    private List<CommentResponse> buildCommentResponses(List<Comment> comments) {
+        if (comments.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, User> users = userMapper.selectBatchIds(
+                        comments.stream().map(Comment::getUserId).distinct().toList())
+                .stream().collect(Collectors.toMap(User::getId, Function.identity()));
+        return comments.stream()
+                .map(comment -> CommentConverter.toResponse(comment,
+                        UserConverter.toBriefResponse(users.get(comment.getUserId()))))
+                .toList();
+    }
+
     public CommentServiceImpl(CommentMapper commentMapper, NoteMapper noteMapper, UserMapper userMapper,NotificationService notificationService,NotificationProducer notificationProducer) {
         this.commentMapper = commentMapper;
         this.noteMapper = noteMapper;
@@ -47,7 +64,7 @@ public class CommentServiceImpl implements CommentService {
     @Override
     public Long createComment(CommentCreateRequest request) {
         Note note = noteMapper.selectById(request.getNoteId());
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || !NoteStatus.APPROVED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
 
@@ -87,9 +104,7 @@ public class CommentServiceImpl implements CommentService {
         queryWrapper.orderByDesc(Comment::getCreatedAt);
 
         List<Comment> comments = commentMapper.selectList(queryWrapper);
-        return comments.stream()
-                .map(this::buildCommentResponse)
-                .toList();
+        return buildCommentResponses(comments);
     }
 
     @Override
@@ -102,9 +117,7 @@ public class CommentServiceImpl implements CommentService {
         Page<Comment> page = new Page<>(getPageNum(request), getPageSize(request));
         Page<Comment> resultPage = commentMapper.selectPage(page, queryWrapper);
 
-        List<CommentResponse> records = resultPage.getRecords().stream()
-                .map(this::buildCommentResponse)
-                .toList();
+        List<CommentResponse> records = buildCommentResponses(resultPage.getRecords());
 
         PageResponse<CommentResponse> response = new PageResponse<>();
         response.setTotal(resultPage.getTotal());

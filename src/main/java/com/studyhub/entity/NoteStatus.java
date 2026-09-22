@@ -14,6 +14,9 @@ public class NoteStatus {
     /** 已拒绝 */
     public static final Integer REJECTED = 2;
 
+    /** 已删除 */
+    public static final Integer DELETED = 3;
+
     private NoteStatus() {
     }
 }

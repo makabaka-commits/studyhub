@@ -4,7 +4,6 @@ import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.listener.api.RabbitListenerErrorHandler;
-import org.springframework.amqp.rabbit.support.ListenerExecutionFailedException;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
@@ -34,6 +33,8 @@ public class RabbitConfig {
     // ===== 死信交换机 =====
     public static final String EXCHANGE_DLX = "studyhub.dlx";
     public static final String QUEUE_DLX = "studyhub.queue.dlx";
+    public static final String QUEUE_NOTIFICATION_FAILED = "studyhub.queue.notification.failed";
+    public static final String QUEUE_BROWSE_HISTORY_FAILED = "studyhub.queue.browse.history.failed";
 
     /**
      * 声明 Direct 交换机
@@ -61,6 +62,16 @@ public class RabbitConfig {
     public Queue browseHistoryQueue() {
         return QueueBuilder.durable(QUEUE_BROWSE_HISTORY)
                 .build();
+    }
+
+    @Bean
+    public Queue notificationFailedQueue() {
+        return QueueBuilder.durable(QUEUE_NOTIFICATION_FAILED).build();
+    }
+
+    @Bean
+    public Queue browseHistoryFailedQueue() {
+        return QueueBuilder.durable(QUEUE_BROWSE_HISTORY_FAILED).build();
     }
 
     /**

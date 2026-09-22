@@ -5,6 +5,7 @@ import com.studyhub.dto.*;
 import com.studyhub.entity.User;
 import com.studyhub.exception.BusinessException;
 import com.studyhub.mapper.UserMapper;
+import com.studyhub.common.JwtUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,9 @@ class UserServiceImplTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private JwtUtil jwtUtil;
+
     @InjectMocks
     private UserServiceImpl userService;
 
@@ -42,6 +46,7 @@ class UserServiceImplTest {
         testUser.setAvatar("avatar.jpg");
         testUser.setEmail("test@example.com");
         testUser.setStatus(1);
+        testUser.setRole("USER");
     }
 
     @AfterEach
@@ -58,6 +63,7 @@ class UserServiceImplTest {
 
         when(userMapper.selectOne(any())).thenReturn(null);
         when(passwordEncoder.encode("password123")).thenReturn("$2a$10$encoded");
+        when(userMapper.insert(any(User.class))).thenReturn(1);
 
         assertDoesNotThrow(() -> userService.register(request));
 
@@ -85,6 +91,7 @@ class UserServiceImplTest {
 
         when(userMapper.selectOne(any())).thenReturn(testUser);
         when(passwordEncoder.matches("password123", testUser.getPassword())).thenReturn(true);
+        when(jwtUtil.generateToken(1L, "testuser")).thenReturn("jwt-token");
 
         UserLoginResponse response = userService.login(request);
 
@@ -119,6 +126,18 @@ class UserServiceImplTest {
     }
 
     @Test
+    void login_shouldThrow_whenUserDisabled() {
+        UserLoginRequest request = new UserLoginRequest();
+        request.setUsername("testuser");
+        request.setPassword("password123");
+        testUser.setStatus(0);
+        when(userMapper.selectOne(any())).thenReturn(testUser);
+
+        assertThrows(BusinessException.class, () -> userService.login(request));
+        verifyNoInteractions(jwtUtil);
+    }
+
+    @Test
     void getCurrentUser_shouldSucceed_whenLoggedIn() {
         LoginUserHolder.setUserId(1L);
         when(userMapper.selectById(1L)).thenReturn(testUser);
@@ -143,6 +162,7 @@ class UserServiceImplTest {
     void updateProfile_shouldSucceed() {
         LoginUserHolder.setUserId(1L);
         when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.updateById(any(User.class))).thenReturn(1);
 
         UserUpdateRequest request = new UserUpdateRequest();
         request.setNickname("NewNickname");
@@ -159,6 +179,7 @@ class UserServiceImplTest {
         when(userMapper.selectById(1L)).thenReturn(testUser);
         when(passwordEncoder.matches("oldPass123", testUser.getPassword())).thenReturn(true);
         when(passwordEncoder.encode("newPass456")).thenReturn("$2a$10$newencoded");
+        when(userMapper.updateById(any(User.class))).thenReturn(1);
 
         PasswordUpdateRequest request = new PasswordUpdateRequest();
         request.setOldPassword("oldPass123");

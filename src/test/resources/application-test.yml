@@ -1,0 +1,28 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:studyhub;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+security:
+  jwt:
+    secret: studyhub-test-secret-at-least-thirty-two-bytes
+    expire-seconds: 3600
+
+upload:
+  path: ${java.io.tmpdir}/studyhub-test-uploads
+
+ai:
+  deepseek:
+    api-key: test-key
+    base-url: http://localhost
+    model: test-model

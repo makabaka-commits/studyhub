@@ -16,6 +16,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql                    # 数据持久化
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql  # 初始化 SQL
+      - ./sql/seed.sql:/docker-entrypoint-initdb.d/seed.sql  # 演示数据
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 10s
@@ -37,6 +38,24 @@ services:
       timeout: 5s
       retries: 5
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: studyhub-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-studyhub}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-studyhub123}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   # ===== 应用服务 =====
   app:
     build: .
@@ -53,6 +72,11 @@ services:
       STUDYHUB_REDIS_HOST: redis
       STUDYHUB_REDIS_PORT: 6379
       STUDYHUB_REDIS_DATABASE: 0
+      STUDYHUB_RABBITMQ_HOST: rabbitmq
+      STUDYHUB_RABBITMQ_PORT: 5672
+      STUDYHUB_RABBITMQ_USERNAME: ${RABBITMQ_USER:-studyhub}
+      STUDYHUB_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD:-studyhub123}
+      STUDYHUB_JWT_SECRET: ${STUDYHUB_JWT_SECRET:-change-this-secret-before-production-use}
       # AI 配置（可选）
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
     volumes:
@@ -62,8 +86,11 @@ services:
         condition: service_healthy   # 等待 MySQL 健康检查通过
       redis:
         condition: service_healthy   # 等待 Redis 健康检查通过
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   mysql-data:
   redis-data:
+  rabbitmq-data:
   app-uploads:

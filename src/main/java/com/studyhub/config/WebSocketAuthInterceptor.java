@@ -14,6 +14,12 @@ import java.util.Map;
 
 public class WebSocketAuthInterceptor implements HandshakeInterceptor {
 
+    private final JwtUtil jwtUtil;
+
+    public WebSocketAuthInterceptor(JwtUtil jwtUtil) {
+        this.jwtUtil = jwtUtil;
+    }
+
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response,
                                    WebSocketHandler wsHandler, Map<String, Object> attributes) {
@@ -24,7 +30,7 @@ public class WebSocketAuthInterceptor implements HandshakeInterceptor {
                 throw new UnauthorizedException("please login");
             }
             try {
-                Long userId = JwtUtil.getUserId(token);
+                Long userId = jwtUtil.getUserId(token);
                 // 把 userId 存入 WebSocket 会话属性中，后续可以在处理器中获取
                 attributes.put("userId", userId);
             } catch (JwtException | IllegalArgumentException e) {

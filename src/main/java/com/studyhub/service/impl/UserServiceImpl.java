@@ -20,10 +20,12 @@ public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
 
-    public UserServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserMapper userMapper, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
     }
     @Override
     public void register(UserRegisterRequest request) {
@@ -64,6 +66,9 @@ public class UserServiceImpl implements UserService {
         if (user == null) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "username or password error");
         }
+        if (!Integer.valueOf(1).equals(user.getStatus())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "account is disabled");
+        }
 
         String storedPassword = user.getPassword();
 
@@ -83,7 +88,7 @@ public class UserServiceImpl implements UserService {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "username or password error");
         }
 
-        String token = JwtUtil.generateToken(user.getId(), user.getUsername());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername());
 
         UserLoginResponse response = new UserLoginResponse();
         response.setId(user.getId());

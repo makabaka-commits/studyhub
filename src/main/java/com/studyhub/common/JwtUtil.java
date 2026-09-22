@@ -7,27 +7,34 @@ import io.jsonwebtoken.security.Keys;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
+@Component
 public class JwtUtil {
 
-    private static final String SECRET = "studyhub-studyhub-studyhub-studyhub-2026";
-    private static final long EXPIRE_TIME = 1000 * 60 * 60 * 24;
+    private final SecretKey key;
+    private final long expireTimeMillis;
 
-    private static final SecretKey KEY = Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
+    public JwtUtil(@Value("${security.jwt.secret}") String secret,
+                   @Value("${security.jwt.expire-seconds:86400}") long expireSeconds) {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
+        this.expireTimeMillis = expireSeconds * 1000L;
+    }
 
-    public static String generateToken(Long userId, String username) {
+    public String generateToken(Long userId, String username) {
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("username", username)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + EXPIRE_TIME))
-                .signWith(KEY)
+                .expiration(new Date(System.currentTimeMillis() + expireTimeMillis))
+                .signWith(key)
                 .compact();
     }
 
-    public static Long getUserId(String token) {
+    public Long getUserId(String token) {
         Claims claims = Jwts.parser()
-                .verifyWith(KEY)
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

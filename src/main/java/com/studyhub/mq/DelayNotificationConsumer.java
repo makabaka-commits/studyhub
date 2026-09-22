@@ -19,9 +19,12 @@ public class DelayNotificationConsumer {
     private static final Logger log = LoggerFactory.getLogger(DelayNotificationConsumer.class);
 
     private final NotificationService notificationService;
+    private final FailedMessageHandler failedMessageHandler;
 
-    public DelayNotificationConsumer(NotificationService notificationService) {
+    public DelayNotificationConsumer(NotificationService notificationService,
+                                     FailedMessageHandler failedMessageHandler) {
         this.notificationService = notificationService;
+        this.failedMessageHandler = failedMessageHandler;
     }
 
     @RabbitListener(queues = RabbitConfig.QUEUE_DLX)
@@ -38,14 +41,15 @@ public class DelayNotificationConsumer {
                     message.getContent()
             );
 
-            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
         } catch (Exception e) {
             log.error("延迟通知处理失败", e);
-            try {
-                channel.basicNack(amqpMessage.getMessageProperties().getDeliveryTag(), false, false);
-            } catch (Exception ex) {
-                log.error("消息确认失败", ex);
-            }
+            failedMessageHandler.park(amqpMessage, channel, RabbitConfig.QUEUE_NOTIFICATION_FAILED);
+            return;
+        }
+        try {
+            channel.basicAck(amqpMessage.getMessageProperties().getDeliveryTag(), false);
+        } catch (Exception e) {
+            log.error("延迟通知消息确认失败，等待连接恢复后重投", e);
         }
     }
 }

@@ -11,6 +11,12 @@ import com.studyhub.mapper.NoteMapper;
 import com.studyhub.mapper.UserMapper;
 import com.studyhub.service.AiSummaryService;
 import com.studyhub.service.BrowseHistoryService;
+import com.studyhub.service.TagService;
+import com.studyhub.common.CacheUtil;
+import com.studyhub.mapper.NoteTagMapper;
+import com.studyhub.mapper.CommentMapper;
+import com.studyhub.mq.BrowseHistoryProducer;
+import org.springframework.web.client.RestClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,6 +52,24 @@ class NoteServiceImplTest {
     private BrowseHistoryService browseHistoryService;
 
     @Mock
+    private TagService tagService;
+
+    @Mock
+    private NoteTagMapper noteTagMapper;
+
+    @Mock
+    private RestClient restClient;
+
+    @Mock
+    private CacheUtil cacheUtil;
+
+    @Mock
+    private BrowseHistoryProducer browseHistoryProducer;
+
+    @Mock
+    private CommentMapper commentMapper;
+
+    @Mock
     private ZSetOperations<String, String> zSetOperations;
 
     @InjectMocks
@@ -71,7 +95,7 @@ class NoteServiceImplTest {
         testNote.setLikeCount(0);
         testNote.setFavoriteCount(0);
 
-        when(stringRedisTemplate.opsForZSet()).thenReturn(zSetOperations);
+        lenient().when(stringRedisTemplate.opsForZSet()).thenReturn(zSetOperations);
     }
 
     @AfterEach
@@ -87,6 +111,12 @@ class NoteServiceImplTest {
         request.setTitle("New Note");
         request.setContent("New content");
 
+        when(noteMapper.insert(any(Note.class))).thenAnswer(invocation -> {
+            Note note = invocation.getArgument(0);
+            note.setId(2L);
+            return 1;
+        });
+
         Long noteId = noteService.createNote(request);
 
         assertNotNull(noteId);
@@ -97,12 +127,29 @@ class NoteServiceImplTest {
     void getNoteById_shouldSucceed() {
         when(noteMapper.selectById(1L)).thenReturn(testNote);
         when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(noteMapper.incrementViewCount(1L)).thenReturn(1);
 
         NoteResponse response = noteService.getNoteById(1L);
 
         assertNotNull(response);
         assertEquals("Test Note", response.getTitle());
-        verify(noteMapper).updateById(any(Note.class));
+        verify(noteMapper).incrementViewCount(1L);
+        verifyNoInteractions(browseHistoryProducer);
+    }
+
+    @Test
+    void getNoteById_recordsBrowseOnlyForLoggedInUser() {
+        LoginUserHolder.setUserId(7L);
+        when(noteMapper.selectById(1L)).thenReturn(testNote);
+        when(userMapper.selectById(1L)).thenReturn(testUser);
+
+        noteService.getNoteById(1L);
+
+        org.mockito.ArgumentCaptor<BrowseHistoryMessage> captor =
+                org.mockito.ArgumentCaptor.forClass(BrowseHistoryMessage.class);
+        verify(browseHistoryProducer).sendBrowseHistory(captor.capture());
+        assertEquals(7L, captor.getValue().getUserId());
+        assertEquals(1L, captor.getValue().getNoteId());
     }
 
     @Test
@@ -142,7 +189,7 @@ class NoteServiceImplTest {
 
         when(noteMapper.selectPage(any(Page.class), any(LambdaQueryWrapper.class)))
                 .thenReturn(pageResult);
-        when(userMapper.selectById(1L)).thenReturn(testUser);
+        when(userMapper.selectBatchIds(anyCollection())).thenReturn(List.of(testUser));
 
         PageResponse<NoteResponse> response = noteService.pageNotes(request);
 

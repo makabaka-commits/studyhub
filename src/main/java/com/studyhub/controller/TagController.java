@@ -13,6 +13,7 @@ import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.studyhub.common.annotation.RequireAdmin;
 
 @io.swagger.v3.oas.annotations.tags.Tag(name = "标签接口")
 @RestController
@@ -71,6 +72,7 @@ public class TagController {
 
     @Operation(summary = "删除标签")
     @DeleteMapping("/{tagId}")
+    @RequireAdmin
     public Result<Void> deleteTag(@PathVariable Long tagId) {
         tagService.deleteTag(tagId);
         return Result.success();

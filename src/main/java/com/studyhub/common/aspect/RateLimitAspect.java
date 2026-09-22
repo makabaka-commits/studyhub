@@ -17,7 +17,9 @@ import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 
 import java.lang.reflect.Method;
-import java.util.concurrent.TimeUnit;
+import java.util.Collections;
+import java.util.UUID;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 
 @Aspect
 @Component
@@ -26,6 +28,14 @@ public class RateLimitAspect {
     private final StringRedisTemplate stringRedisTemplate;
 
     private static final String RATE_LIMIT_PREFIX = "studyhub:ratelimit:";
+    private static final DefaultRedisScript<Long> RATE_LIMIT_SCRIPT = new DefaultRedisScript<>("""
+            redis.call('ZREMRANGEBYSCORE', KEYS[1], 0, ARGV[1])
+            local count = redis.call('ZCARD', KEYS[1])
+            if count >= tonumber(ARGV[2]) then return 0 end
+            redis.call('ZADD', KEYS[1], ARGV[3], ARGV[4])
+            redis.call('EXPIRE', KEYS[1], ARGV[5])
+            return 1
+            """, Long.class);
 
     private final SpelExpressionParser parser = new SpelExpressionParser();
     private final ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
@@ -37,27 +47,25 @@ public class RateLimitAspect {
     @Around("@annotation(rateLimit)")
     public Object around(ProceedingJoinPoint joinPoint, RateLimit rateLimit) throws Throwable {
         Long userId = LoginUserHolder.getUserId();
-        if (userId == null) {
-            return joinPoint.proceed();
-        }
-
         String key = parseKey(rateLimit.key(), joinPoint);
-        String rateLimitKey = RATE_LIMIT_PREFIX + key + ":" + userId;
+        String subject = userId == null ? "anonymous" : String.valueOf(userId);
+        String rateLimitKey = RATE_LIMIT_PREFIX + key + ":" + subject;
 
         long now = System.currentTimeMillis();
         long windowStart = now - (rateLimit.window() * 1000L);
 
-        stringRedisTemplate.opsForZSet().removeRangeByScore(rateLimitKey, 0, windowStart);
-
-        Long count = stringRedisTemplate.opsForZSet().zCard(rateLimitKey);
-
-        if (count != null && count >= rateLimit.limit()) {
+        Long allowed = stringRedisTemplate.execute(
+                RATE_LIMIT_SCRIPT,
+                Collections.singletonList(rateLimitKey),
+                String.valueOf(windowStart),
+                String.valueOf(rateLimit.limit()),
+                String.valueOf(now),
+                now + ":" + UUID.randomUUID(),
+                String.valueOf(rateLimit.window() * 2)
+        );
+        if (!Long.valueOf(1L).equals(allowed)) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, rateLimit.message());
         }
-
-        stringRedisTemplate.opsForZSet().add(rateLimitKey, String.valueOf(now), now);
-
-        stringRedisTemplate.expire(rateLimitKey, rateLimit.window() * 2, TimeUnit.SECONDS);
 
         return joinPoint.proceed();
     }
@@ -67,7 +75,7 @@ public class RateLimitAspect {
             return joinPoint.getSignature().toShortString();
         }
 
-        if (!key.startsWith("#")) {
+        if (!key.contains("#")) {
             return key;
         }
 

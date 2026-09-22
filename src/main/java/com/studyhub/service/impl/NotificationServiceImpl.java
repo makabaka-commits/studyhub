@@ -2,6 +2,7 @@ package com.studyhub.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.studyhub.common.ErrorCode;
 import com.studyhub.common.LoginUserHolder;
 import com.studyhub.entity.Notification;
@@ -21,6 +22,9 @@ import com.studyhub.mapper.NoteMapper;
 import com.studyhub.mapper.UserMapper;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -68,9 +72,7 @@ public class NotificationServiceImpl implements NotificationService {
 
         List<Notification> notifications = notificationMapper.selectList(queryWrapper);
 
-        return notifications.stream()
-                .map(this::buildNotificationResponse)
-                .toList();
+        return buildNotificationResponses(notifications);
     }
 
     @Override
@@ -84,9 +86,7 @@ public class NotificationServiceImpl implements NotificationService {
         Page<Notification> page = new Page<>(getPageNum(request), getPageSize(request));
         Page<Notification> resultPage = notificationMapper.selectPage(page, queryWrapper);
 
-        List<NotificationResponse> records = resultPage.getRecords().stream()
-                .map(this::buildNotificationResponse)
-                .toList();
+        List<NotificationResponse> records = buildNotificationResponses(resultPage.getRecords());
 
         return buildPageResponse(resultPage.getTotal(), resultPage.getCurrent(), resultPage.getSize(), records);
     }
@@ -112,29 +112,31 @@ public class NotificationServiceImpl implements NotificationService {
     public void markAllAsRead() {
         Long userId = LoginUserHolder.getUserId();
 
-        LambdaQueryWrapper<Notification> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Notification::getReceiverId, userId);
-        queryWrapper.eq(Notification::getReadStatus, 0);
-
-        List<Notification> notifications = notificationMapper.selectList(queryWrapper);
-        for (Notification notification : notifications) {
-            notification.setReadStatus(1);
-            notificationMapper.updateById(notification);
-        }
+        LambdaUpdateWrapper<Notification> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(Notification::getReceiverId, userId)
+                .eq(Notification::getReadStatus, 0)
+                .set(Notification::getReadStatus, 1);
+        notificationMapper.update(null, updateWrapper);
     }
-    private NotificationResponse buildNotificationResponse(Notification notification) {
-        User sender = userMapper.selectById(notification.getSenderId());
-        UserBriefResponse senderResponse = UserConverter.toBriefResponse(sender);
 
-        String noteTitle = null;
-        if (notification.getNoteId() != null) {
-            Note note = noteMapper.selectById(notification.getNoteId());
-            if (note != null) {
-                noteTitle = note.getTitle();
-            }
+    private List<NotificationResponse> buildNotificationResponses(List<Notification> notifications) {
+        if (notifications.isEmpty()) {
+            return List.of();
         }
+        List<Long> senderIds = notifications.stream().map(Notification::getSenderId).distinct().toList();
+        Map<Long, User> senders = userMapper.selectBatchIds(senderIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        return NotificationConverter.toResponse(notification, senderResponse, noteTitle);
+        List<Long> noteIds = notifications.stream().map(Notification::getNoteId)
+                .filter(id -> id != null).distinct().toList();
+        Map<Long, Note> notes = noteIds.isEmpty() ? Map.of() : noteMapper.selectBatchIds(noteIds).stream()
+                .collect(Collectors.toMap(Note::getId, Function.identity()));
+
+        return notifications.stream().map(notification -> {
+            UserBriefResponse sender = UserConverter.toBriefResponse(senders.get(notification.getSenderId()));
+            Note note = notes.get(notification.getNoteId());
+            return NotificationConverter.toResponse(notification, sender, note == null ? null : note.getTitle());
+        }).toList();
     }
     @Override
     public Long countUnread() {

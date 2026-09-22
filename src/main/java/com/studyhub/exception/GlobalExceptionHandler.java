@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -19,49 +21,55 @@ public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(UnauthorizedException.class)
-    public Result<?> unauthorizedExceptionHandler(UnauthorizedException e) {
-        return Result.error(e.getCode(), e.getMessage());
+    public ResponseEntity<Result<?>> unauthorizedExceptionHandler(UnauthorizedException e) {
+        return response(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(BusinessException.class)
-    public Result<?> businessExceptionHandler(BusinessException e) {
-        return Result.error(e.getCode(), e.getMessage());
+    public ResponseEntity<Result<?>> businessExceptionHandler(BusinessException e) {
+        return response(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Result<?> methodArgumentNotValidExceptionHandler(MethodArgumentNotValidException e) {
+    public ResponseEntity<Result<?>> methodArgumentNotValidExceptionHandler(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldError().getDefaultMessage();
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), message);
+        return response(ErrorCode.PARAM_ERROR.getCode(), message);
     }
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
-    public Result<?> missingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), e.getParameterName() + " is required");
+    public ResponseEntity<Result<?>> missingServletRequestParameterExceptionHandler(MissingServletRequestParameterException e) {
+        return response(ErrorCode.PARAM_ERROR.getCode(), e.getParameterName() + " is required");
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public Result<?> methodArgumentTypeMismatchExceptionHandler(MethodArgumentTypeMismatchException e) {
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), e.getName() + " type error");
+    public ResponseEntity<Result<?>> methodArgumentTypeMismatchExceptionHandler(MethodArgumentTypeMismatchException e) {
+        return response(ErrorCode.PARAM_ERROR.getCode(), e.getName() + " type error");
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public Result<?> httpMessageNotReadableExceptionHandler(HttpMessageNotReadableException e) {
-        return Result.error(ErrorCode.PARAM_ERROR.getCode(), "request body error");
+    public ResponseEntity<Result<?>> httpMessageNotReadableExceptionHandler(HttpMessageNotReadableException e) {
+        return response(ErrorCode.PARAM_ERROR.getCode(), "request body error");
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public Result<?> httpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException e) {
-        return Result.error(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMessage());
+    public ResponseEntity<Result<?>> httpRequestMethodNotSupportedExceptionHandler(HttpRequestMethodNotSupportedException e) {
+        return response(ErrorCode.METHOD_NOT_ALLOWED.getCode(), ErrorCode.METHOD_NOT_ALLOWED.getMessage());
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
-    public Result<?> noHandlerFoundExceptionHandler(NoHandlerFoundException e) {
-        return Result.error(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMessage());
+    public ResponseEntity<Result<?>> noHandlerFoundExceptionHandler(NoHandlerFoundException e) {
+        return response(ErrorCode.NOT_FOUND.getCode(), ErrorCode.NOT_FOUND.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
-    public Result<?> exceptionHandler(Exception e) {
+    public ResponseEntity<Result<?>> exceptionHandler(Exception e) {
         log.error("System exception", e);
-        return Result.error(ErrorCode.SYSTEM_ERROR.getCode(), ErrorCode.SYSTEM_ERROR.getMessage());
+        return response(ErrorCode.SYSTEM_ERROR.getCode(), ErrorCode.SYSTEM_ERROR.getMessage());
+    }
+
+    private ResponseEntity<Result<?>> response(Integer code, String message) {
+        HttpStatus status = HttpStatus.resolve(code);
+        return ResponseEntity.status(status == null ? HttpStatus.INTERNAL_SERVER_ERROR : status)
+                .body(Result.error(code, message));
     }
 }

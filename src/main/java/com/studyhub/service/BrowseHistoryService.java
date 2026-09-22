@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface BrowseHistoryService {
 
-    void recordBrowse(Long noteId);
+    void recordBrowse(Long userId, Long noteId);
 
     List<NoteResponse> listMyBrowseHistory();
 

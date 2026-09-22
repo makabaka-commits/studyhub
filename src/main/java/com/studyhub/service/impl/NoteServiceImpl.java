@@ -85,6 +85,19 @@ public class NoteServiceImpl implements NoteService {
         return NoteConverter.toResponse(note, author);
     }
 
+    private List<NoteResponse> buildNoteResponses(List<Note> notes) {
+        if (notes.isEmpty()) {
+            return List.of();
+        }
+        List<Long> userIds = notes.stream().map(Note::getUserId).distinct().toList();
+        Map<Long, User> users = userMapper.selectBatchIds(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+        return notes.stream()
+                .map(note -> NoteConverter.toResponse(note,
+                        UserConverter.toBriefResponse(users.get(note.getUserId()))))
+                .toList();
+    }
+
     @Override
     public Long createNote(NoteCreateRequest request) {
         Long userId = LoginUserHolder.getUserId();
@@ -96,7 +109,7 @@ public class NoteServiceImpl implements NoteService {
         note.setViewCount(0);
         note.setLikeCount(0);
         note.setFavoriteCount(0);
-        note.setStatus(1);
+        note.setStatus(NoteStatus.PENDING);
 
         int rows = noteMapper.insert(note);
         if (rows != 1) {
@@ -112,18 +125,20 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public NoteResponse getNoteById(Long id) {
         Note note = noteMapper.selectById(id);
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        Long userId = LoginUserHolder.getUserId();
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())
+                || (!NoteStatus.APPROVED.equals(note.getStatus()) && !note.getUserId().equals(userId))) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
 
-        int viewCount = note.getViewCount() == null ? 0 : note.getViewCount();
-        note.setViewCount(viewCount + 1);
-        noteMapper.updateById(note);
-
-        stringRedisTemplate.opsForZSet().incrementScore(HOT_NOTE_KEY, String.valueOf(id), 1);
-        Long userId = LoginUserHolder.getUserId();
-        if (userId != null) {
-            browseHistoryProducer.sendBrowseHistory(new BrowseHistoryMessage(userId, id));
+        if (NoteStatus.APPROVED.equals(note.getStatus())) {
+            int viewCount = note.getViewCount() == null ? 0 : note.getViewCount();
+            noteMapper.incrementViewCount(id);
+            note.setViewCount(viewCount + 1);
+            stringRedisTemplate.opsForZSet().incrementScore(HOT_NOTE_KEY, String.valueOf(id), 1);
+            if (userId != null) {
+                browseHistoryProducer.sendBrowseHistory(new BrowseHistoryMessage(userId, id));
+            }
         }
         return buildNoteResponse(note);
     }
@@ -143,9 +158,7 @@ public class NoteServiceImpl implements NoteService {
         queryWrapper.orderByDesc(Note::getCreatedAt);
 
         List<Note> notes = noteMapper.selectList(queryWrapper);
-        List<NoteResponse> result = notes.stream()
-                .map(this::buildNoteResponse)
-                .toList();
+        List<NoteResponse> result = buildNoteResponses(notes);
 
         // 3. 存入缓存，过期时间 5 分钟
         cacheUtil.put(cacheKey, result, 300L);
@@ -170,9 +183,7 @@ public class NoteServiceImpl implements NoteService {
                 stringRedisTemplate.opsForZSet()
                         .add(HOT_NOTE_KEY, String.valueOf(note.getId()), viewCount);
             }
-            return notes.stream()
-                    .map(this::buildNoteResponse)
-                    .toList();
+            return buildNoteResponses(notes);
         }
 
         List<Long> noteIds = noteIdSet.stream()
@@ -192,9 +203,7 @@ public class NoteServiceImpl implements NoteService {
             }
         }
 
-        return result.stream()
-                .map(this::buildNoteResponse)
-                .toList();
+        return buildNoteResponses(result);
     }
 
     @Override
@@ -202,7 +211,7 @@ public class NoteServiceImpl implements NoteService {
         Long userId = LoginUserHolder.getUserId();
 
         Note note = noteMapper.selectById(request.getId());
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
 
@@ -212,6 +221,7 @@ public class NoteServiceImpl implements NoteService {
 
         note.setTitle(request.getTitle());
         note.setContent(request.getContent());
+        note.setStatus(NoteStatus.PENDING);
 
         int rows = noteMapper.updateById(note);
         if (rows != 1) {
@@ -225,7 +235,7 @@ public class NoteServiceImpl implements NoteService {
         Long userId = LoginUserHolder.getUserId();
 
         Note note = noteMapper.selectById(id);
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
 
@@ -233,7 +243,7 @@ public class NoteServiceImpl implements NoteService {
             throw new BusinessException(ErrorCode.FORBIDDEN, "no permission");
         }
 
-        note.setStatus(0);
+        note.setStatus(NoteStatus.DELETED);
         noteMapper.updateById(note);
         cacheUtil.evict("notes:list");
         stringRedisTemplate.opsForZSet().remove(HOT_NOTE_KEY, String.valueOf(id));
@@ -242,8 +252,11 @@ public class NoteServiceImpl implements NoteService {
     @Override
     public String generateSummary(Long noteId) {
         Note note = noteMapper.selectById(noteId);
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || NoteStatus.DELETED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
+        }
+        if (!note.getUserId().equals(LoginUserHolder.getUserId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "no permission");
         }
 
         String summary = aiSummaryService.generateSummary(note.getContent());
@@ -283,9 +296,7 @@ public class NoteServiceImpl implements NoteService {
         Page<Note> page = new Page<>(pageNum, pageSize);
         Page<Note> resultPage = noteMapper.selectPage(page, queryWrapper);
 
-        List<NoteResponse> records = resultPage.getRecords().stream()
-                .map(this::buildNoteResponse)
-                .toList();
+        List<NoteResponse> records = buildNoteResponses(resultPage.getRecords());
 
         PageResponse<NoteResponse> response = new PageResponse<>();
         response.setTotal(resultPage.getTotal());
@@ -325,17 +336,16 @@ public class NoteServiceImpl implements NoteService {
 
         // 4. 查询笔记详情
         List<Note> notes = noteMapper.selectBatchIds(recommendIds);
-        return notes.stream()
+        return buildNoteResponses(notes.stream()
                 .filter(n -> Integer.valueOf(1).equals(n.getStatus()))
-                .map(this::buildNoteResponse)
-                .toList();
+                .toList());
     }
 
     @Override
     public String askNote(Long noteId, String question) {
         // 1. 查询笔记内容
         Note note = noteMapper.selectById(noteId);
-        if (note == null || Integer.valueOf(0).equals(note.getStatus())) {
+        if (note == null || !NoteStatus.APPROVED.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "note not found");
         }
 
@@ -374,11 +384,11 @@ public class NoteServiceImpl implements NoteService {
         if (note == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "笔记不存在");
         }
-        if (!Integer.valueOf(0).equals(note.getStatus())) {
+        if (!NoteStatus.PENDING.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "该笔记不是待审核状态");
         }
 
-        note.setStatus(1);
+        note.setStatus(NoteStatus.APPROVED);
         noteMapper.updateById(note);
 
         cacheUtil.evict("notes:list");
@@ -390,11 +400,11 @@ public class NoteServiceImpl implements NoteService {
         if (note == null) {
             throw new BusinessException(ErrorCode.NOT_FOUND, "笔记不存在");
         }
-        if (!Integer.valueOf(0).equals(note.getStatus())) {
+        if (!NoteStatus.PENDING.equals(note.getStatus())) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "该笔记不是待审核状态");
         }
 
-        note.setStatus(2);
+        note.setStatus(NoteStatus.REJECTED);
         noteMapper.updateById(note);
     }
 
@@ -407,7 +417,7 @@ public class NoteServiceImpl implements NoteService {
         }
 
         LambdaQueryWrapper<Note> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Note::getStatus, 0);
+        queryWrapper.eq(Note::getStatus, NoteStatus.PENDING);
         queryWrapper.orderByDesc(Note::getCreatedAt);
 
         String keyword = request.getKeyword();
@@ -421,9 +431,7 @@ public class NoteServiceImpl implements NoteService {
         Page<Note> page = new Page<>(pageNum, pageSize);
         Page<Note> resultPage = noteMapper.selectPage(page, queryWrapper);
 
-        List<NoteResponse> records = resultPage.getRecords().stream()
-                .map(this::buildNoteResponse)
-                .toList();
+        List<NoteResponse> records = buildNoteResponses(resultPage.getRecords());
 
         PageResponse<NoteResponse> response = new PageResponse<>();
         response.setTotal(resultPage.getTotal());
@@ -452,7 +460,7 @@ public class NoteServiceImpl implements NoteService {
         response.setTotalComments(commentMapper.selectCount(null));
 
         LambdaQueryWrapper<Note> pendingWrapper = new LambdaQueryWrapper<>();
-        pendingWrapper.eq(Note::getStatus, 0);
+        pendingWrapper.eq(Note::getStatus, NoteStatus.PENDING);
         response.setPendingNotes(noteMapper.selectCount(pendingWrapper));
 
         List<Note> allNotes = noteMapper.selectList(null);

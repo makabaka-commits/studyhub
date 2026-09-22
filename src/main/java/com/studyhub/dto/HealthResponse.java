@@ -5,6 +5,7 @@ public class HealthResponse {
     private String status;
     private String database;
     private String redis;
+    private String rabbitmq;
     private Long timestamp;
 
     public String getStatus() {
@@ -29,6 +30,14 @@ public class HealthResponse {
 
     public void setRedis(String redis) {
         this.redis = redis;
+    }
+
+    public String getRabbitmq() {
+        return rabbitmq;
+    }
+
+    public void setRabbitmq(String rabbitmq) {
+        this.rabbitmq = rabbitmq;
     }
 
     public Long getTimestamp() {
