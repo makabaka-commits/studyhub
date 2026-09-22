@@ -1,184 +1,67 @@
 # StudyHub
 
-StudyHub 是一个面向 Java 后端研发岗位的学习笔记分享平台。项目重点展示认证授权、内容管理、互动通知、缓存、消息队列、实时推送、AI 接口集成、测试和容器化部署。
+一个学习笔记分享平台的后端。用户可以发布笔记，管理员审核后公开展示；其他用户可以搜索、评论、点赞和收藏。通知与浏览历史由 RabbitMQ 异步处理，热门笔记和列表查询使用 Redis。
 
-> 当前仓库是后端项目。`project-overview.html` 用于展示架构，接口可以通过 Knife4j、Swagger UI 或 `docs/studyhub.postman_collection.json` 演示。
-
-## 核心功能
-
-- 用户注册、登录、资料和密码管理
-- 笔记发布、审核、搜索、推荐与 Markdown 渲染
-- 标签、评论、点赞、收藏和浏览历史
-- RabbitMQ 异步通知、WebSocket 实时推送
-- Redis 缓存、热门排行和 Lua 原子限流
-- DeepSeek 笔记摘要与问答，调用失败时提供降级结果
-- 管理员审核、用户状态管理和数据仪表盘
-- 文件上传、统一异常响应、TraceId 和健康检查
+仓库以 Spring Boot API 为主体，没有独立前端。可以通过 [接口文档](#接口与验证)或 [Apifox 请求集合](docs/studyhub.postman_collection.json)体验完整流程；[架构概览](project-overview.html)是单独的说明页面。
 
 ## 技术栈
 
-| 分类 | 技术 |
-|---|---|
-| 基础框架 | Java 17、Spring Boot 3.3、MyBatis-Plus |
-| 数据与缓存 | MySQL 8、Redis 7 |
-| 异步与实时 | RabbitMQ 4.3.6、WebSocket、STOMP |
-| 安全 | JWT、BCrypt、参数校验、管理员权限切面 |
-| 工程化 | Maven、JUnit 5、Mockito、H2、Docker Compose、GitHub Actions |
-| 文档 | Springdoc OpenAPI、Knife4j、Apifox/Postman Collection |
+Java 17 · Spring Boot 3.3 · MyBatis-Plus · MySQL 8 · Redis 7 · RabbitMQ · WebSocket/STOMP · JWT · Maven
 
-## 架构与关键取舍
+## 业务流程
 
-项目采用 Controller、Service、Mapper 的分层结构，DTO 与数据库实体分离。
+1. 用户注册、登录，发布 Markdown 笔记；新笔记默认待审核。
+2. 管理员审核通过后，笔记进入公开列表，可按条件查询，也会参与热门排行。
+3. 其他用户点赞、收藏或评论；通知异步入库，在线用户可收到 WebSocket 推送。
+4. 阅读笔记时记录浏览量和浏览历史。可选调用 DeepSeek 生成摘要或进行笔记问答；没有配置 API Key 时不影响核心流程。
 
-- Redis 使用 Cache-Aside 模式缓存列表，并用 ZSet 维护热门笔记。
-- 注册和登录限流使用 Redis ZSet 与 Lua 脚本，保证“清理、计数、写入”原子执行。
-- 点赞和收藏使用数据库事务；统计字段通过 SQL 原子递增/递减，避免并发覆盖。
-- RabbitMQ 将通知落库和浏览历史写入从主请求中解耦；WebSocket 用于在线实时提示。
-- 浏览历史按用户与笔记的唯一键原子写入，重复浏览只更新时间，避免并发重复插入。
-- 消费失败的消息先写入独立暂存队列，确认保存成功后才确认原消息，避免直接丢弃。
-- JWT 密钥由环境变量提供，生产环境不使用仓库中的开发默认值。
-- 测试环境使用 H2，避免单元测试依赖本地 MySQL、Redis 和 RabbitMQ。
+此外还包括标签管理、文件上传、用户资料与密码修改、管理员用户管理和数据统计。
 
-详细结构可打开 [project-overview.html](project-overview.html)。
+## 几个实现细节
 
-## 快速启动
+- **互动计数**：点赞、收藏的关系记录与计数更新放在数据库事务中，计数使用 SQL 原子增减，避免并发请求覆盖彼此的结果。见 [`InteractionServiceImpl`](src/main/java/com/studyhub/service/impl/InteractionServiceImpl.java) 和相关 Mapper。
+- **缓存与限流**：公开笔记列表采用 Cache-Aside，内容变化时清理缓存；热门笔记使用 Redis ZSet。注册、登录限流通过 Lua 脚本将过期记录清理和计数合并为一次原子操作。见 [`NoteServiceImpl`](src/main/java/com/studyhub/service/impl/NoteServiceImpl.java) 和 [`RateLimitAspect`](src/main/java/com/studyhub/common/aspect/RateLimitAspect.java)。
+- **异步消息**：通知、浏览历史与主请求解耦。消费失败时先将原消息持久化到独立暂存队列，确认保存成功后才确认原消息；暂存失败则重新入队。暂存队列不自动重试，需要人工排查。见 [`FailedMessageHandler`](src/main/java/com/studyhub/mq/FailedMessageHandler.java)。
 
-### 不使用 Docker（Windows）
+项目按 Controller → Service → Mapper 分层，接口使用 DTO，不直接暴露数据库实体。JWT 密钥支持通过环境变量配置；统一错误响应包含 HTTP 状态码和 TraceId。
 
-前置要求：JDK 17、MySQL 8、Redis 7；完整演示异步通知和浏览历史还需要 RabbitMQ（本地安装可使用 4.3.6，并搭配兼容的 Erlang/OTP 27）。仓库自带 Maven Wrapper，不必单独安装 Maven。
+## 本地运行（Windows，无需 Docker）
 
-1. 确认 MySQL 和 Redis 已启动；若要演示通知，再确认 RabbitMQ 已启动。可以在 PowerShell 中检查端口：
+需要 JDK 17、MySQL 8、Redis 7 和 RabbitMQ。仓库自带 Maven Wrapper，不必单独安装 Maven。若只验证部分同步接口，可以暂不启动 RabbitMQ；要验证通知和浏览历史，必须启动它。
 
-   ```powershell
-   Test-NetConnection localhost -Port 3306
-   Test-NetConnection localhost -Port 6379
-   Test-NetConnection localhost -Port 5672
-   ```
-
-2. 在 MySQL 客户端执行 `sql/init.sql` 创建新库和表，再执行一次 `sql/seed.sql` 创建演示账号。若是已有旧库，先备份，再根据 [SQL 说明](sql/README.md)执行迁移；不要直接重新灌入种子数据。
-3. 在项目根目录打开 PowerShell，按实际配置设置环境变量，然后启动：
+1. 启动 MySQL、Redis、RabbitMQ。在 MySQL 客户端依次执行 [`sql/init.sql`](sql/init.sql) 和 [`sql/seed.sql`](sql/seed.sql)。种子脚本只在新库执行一次；已有数据库请先看 [数据库脚本说明](sql/README.md)，不要重复灌入演示数据。
+2. 在项目根目录打开 PowerShell，设置本机凭据并启动服务：
 
    ```powershell
    $env:STUDYHUB_DB_USERNAME = "root"
    $env:STUDYHUB_DB_PASSWORD = "你的 MySQL 密码"
-   $env:STUDYHUB_JWT_SECRET = "替换成至少 32 字节的本地密钥"
-   .\mvnw.cmd clean test
+   $env:STUDYHUB_JWT_SECRET = "替换成至少 32 字节的随机密钥"
    .\mvnw.cmd spring-boot:run
    ```
 
-   环境变量只对当前 PowerShell 窗口及其启动的程序生效；项目根目录的 `.env` 文件不会被 `spring-boot:run` 自动读取。启动后访问 `http://localhost:8080/api/v1/health`，再按 [Apifox 演示指南](docs/apifox-guide.md)发送请求。
+   默认连接本机的 MySQL `3306`、Redis `6379`、RabbitMQ `5672`，服务监听 `8080`。使用其他地址或账号时，可设置 `STUDYHUB_DB_URL`、`STUDYHUB_REDIS_HOST`、`STUDYHUB_RABBITMQ_HOST`、`STUDYHUB_RABBITMQ_USERNAME` 和 `STUDYHUB_RABBITMQ_PASSWORD`。项目根目录的 `.env` **不会**被上述启动命令自动读取。
+3. 访问 [`http://localhost:8080/api/v1/health`](http://localhost:8080/api/v1/health)。响应会分别给出数据库、Redis 和 RabbitMQ 的状态；依赖不可用时总体状态为 `DEGRADED`。
 
-健康检查返回数据库、Redis 和 RabbitMQ 三项状态；任一项不可用时总体状态为 `DEGRADED`。RabbitMQ 未启动时，点赞和评论等主操作可能返回成功，但异步通知不会落库；不能把这当作通知功能验证通过。完整面试演示应启动 RabbitMQ 并检查消费者日志和通知列表。
+演示数据包含管理员 `test03` 和普通用户 `user_b`，初始密码均为 `password`，**仅用于本地演示**。如果运行旧数据库，账号和密码以实际数据为准。
 
-消费失败的通知（包括延迟通知）保留在 `studyhub.queue.notification.failed`，浏览历史保留在 `studyhub.queue.browse.history.failed`。它们是持久化的失败消息暂存队列，**不会自动重试**。排查原始异常和数据库状态后再人工处理，不要直接清空或批量重投；重复投递可能产生重复通知。新增的是独立队列，不修改已有业务队列的参数。
+也提供可选的 [`docker-compose.yml`](docker-compose.yml)，但本地运行不依赖 Docker。
 
-### Docker Compose（可选）
+## 接口与验证
 
-若以后需要一键部署，再安装 Docker 与 Docker Compose，运行：
+服务启动后可访问 [Knife4j](http://localhost:8080/api/v1/doc.html)、[Swagger UI](http://localhost:8080/api/v1/swagger-ui.html) 或 [OpenAPI JSON](http://localhost:8080/api/v1/v3/api-docs)。
 
-```bash
-docker compose up -d --build
-```
+推荐将 [`docs/studyhub.postman_collection.json`](docs/studyhub.postman_collection.json) 导入 Apifox，按注册 → 登录 → 发布 → 审核 → 互动 → 查询通知的顺序执行。集合会保存 Token 和新建笔记 ID；详细步骤见 [Apifox 指南](docs/apifox-guide.md)。通知是异步的，查询前应确认 RabbitMQ 正常运行。
 
-首次创建 MySQL 数据卷时会自动执行 `sql/init.sql` 和 `sql/seed.sql`。已有旧数据库时，先备份并按 [SQL 说明](sql/README.md)迁移。
-
-常用环境变量：
-
-```text
-STUDYHUB_DB_URL
-STUDYHUB_DB_USERNAME
-STUDYHUB_DB_PASSWORD
-STUDYHUB_REDIS_HOST
-STUDYHUB_RABBITMQ_HOST
-STUDYHUB_RABBITMQ_USERNAME
-STUDYHUB_RABBITMQ_PASSWORD
-STUDYHUB_JWT_SECRET
-DEEPSEEK_API_KEY
-```
-
-## 接口文档与 Apifox
-
-应用启动后：
-
-- Knife4j：`http://localhost:8080/api/v1/doc.html`
-- Swagger UI：`http://localhost:8080/api/v1/swagger-ui.html`
-- OpenAPI JSON：`http://localhost:8080/api/v1/v3/api-docs`
-- RabbitMQ 管理页：`http://localhost:15672`
-
-Apifox 可以直接导入：
-
-```text
-docs/studyhub.postman_collection.json
-```
-
-集合中的脚本会自动保存登录 Token 和新建笔记 ID。完整流程见 [Apifox 演示指南](docs/apifox-guide.md)。
-
-执行 `sql/seed.sql` 后提供以下开发演示账号，密码均为 `password`：
-
-- `test03`：管理员
-- `user_b`：普通用户
-
-## 测试
+运行自动化测试：
 
 ```powershell
 .\mvnw.cmd clean test
 ```
 
-当前测试覆盖：
+常规测试覆盖认证、笔记、互动、浏览历史、消息失败暂存及健康检查，使用 H2 和模拟依赖，不要求本机启动整套服务。GitHub Actions 会在推送时执行 Maven 验证。真实 RabbitMQ 暂存队列测试是可选的，运行方式见 [`RabbitParkingIntegrationTest`](src/test/java/com/studyhub/mq/RabbitParkingIntegrationTest.java)。
 
-- 注册、登录和参数校验
-- 用户资料与密码修改
-- 笔记创建、详情、分页与权限校验
-- 浏览历史消息的用户 ID 传递、匿名访问处理与原子写入
-- RabbitMQ 消费失败暂存、暂存失败重入队和健康状态判断
-- Spring 应用上下文加载
+## 当前边界
 
-如已在本机启动 RabbitMQ，并使用默认的本地 `guest/guest` 账号，可选运行真实 broker 集成测试。该测试仅创建并清理一个随机命名的临时队列，不使用业务队列：
-
-```powershell
-$env:STUDYHUB_RABBIT_INTEGRATION = "true"
-.\mvnw.cmd -Dtest=RabbitParkingIntegrationTest test
-```
-
-后续可补充真实 MySQL/Redis 集成测试、RabbitMQ 端到端测试和并发互动测试。本机不安装 Docker 也可以运行现有测试；Testcontainers 则需要容器运行时。
-
-## API 示例
-
-登录：
-
-```http
-POST /api/v1/auth/login
-Content-Type: application/json
-
-{
-  "username": "user_b",
-  "password": "password"
-}
-```
-
-访问受保护接口：
-
-```http
-Authorization: Bearer <token>
-```
-
-错误响应同时使用正确的 HTTP 状态码和统一响应体：
-
-```json
-{
-  "code": 401,
-  "message": "please login",
-  "traceId": "...",
-  "data": null
-}
-```
-
-## 已知限制
-
-- 通知采用常规异步消息，尚未实现 Outbox 最终一致性方案。
-- 文件存储使用本地磁盘，生产环境应替换为对象存储。
-- 推荐算法目前基于标签相似度，不是个性化推荐模型。
-- WebSocket 开发环境通过查询参数传递 Token，生产环境建议改为短期握手票据。
-- 消费失败消息会进入暂存队列，但暂未提供自动重试和人工重投工具；生产化前仍需补充幂等键、告警与补偿流程。
-
-这些限制被保留为后续演进方向，而不是将项目描述为可直接投入生产。
+- 通知采用普通异步投递，尚未实现 Outbox；消息失败暂存后也没有自动重试或人工重投工具。
+- 上传文件保存在本地磁盘；WebSocket 开发环境通过查询参数传递 Token，均不适合直接照搬到生产环境。
+- 推荐基于标签相似度，不是个性化模型；AI 功能依赖外部 API。
